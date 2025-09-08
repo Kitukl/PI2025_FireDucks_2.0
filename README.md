@@ -6,8 +6,8 @@ This project is a platform for students that combines individual work and team i
 
 ## FireDucks_2.0 team
 
-Oleh Kit - Team Lead, Developer
-Daria Hyrich - Designer, Developer
-Ostap Palamarchuk - Developer
-Taras Mazepa - Developer
-Christina Ivaskiv - Developer 
+Oleh Kit - Team Lead, Developer  
+Daria Hyrich - Designer, Developer  
+Ostap Palamarchuk - Developer  
+Taras Mazepa - Developer  
+Christina Ivaskiv - Developer   
