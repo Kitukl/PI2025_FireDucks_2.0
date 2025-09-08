@@ -11,3 +11,12 @@ Daria Hyrich - Designer, Developer
 Ostap Palamarchuk - Developer  
 Taras Mazepa - Developer  
 Christina Ivaskiv - Developer   
+
+## Tech Stack
+
+* .Net 9  
+* Blazor Desktop
+* TailwindCSS
+* Entity Framework Core
+* PostgreSQL
+* Docker
