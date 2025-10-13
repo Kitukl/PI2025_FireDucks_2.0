@@ -1,10 +1,15 @@
 ﻿using System;
+using DotNetEnv;
 using Npgsql;
 
 namespace ConsoleApp.database
 {
     public static class DB
     {
+        static DB()
+        {
+            Env.Load();
+        }
         public static NpgsqlConnection GetConnection()
         {
             string connectionString = Environment.GetEnvironmentVariable("DUCK_DB_CONN")
