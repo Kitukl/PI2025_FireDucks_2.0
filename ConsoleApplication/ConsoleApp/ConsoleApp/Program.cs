@@ -7,7 +7,14 @@ class Program
 {
     public static void Main()
     {
-        var lectureTest = new Lecture();
-        lectureTest.AddLecture("Oleh", "Kit");
+        try
+        {
+            var categories = new Lesson();
+            categories.GenerateLessons();
+        }
+        catch (Exception e)
+        {
+            Console.Write(e.Message);
+        }
     }
 }
