@@ -9,7 +9,9 @@ namespace ConsoleApp.database
         static DB()
         {
             Env.Load();
+            Console.WriteLine("DEBUG: DUCK_DB_CONN = " + Environment.GetEnvironmentVariable("DUCK_DB_CONN"));
         }
+
         public static NpgsqlConnection GetConnection()
         {
             string connectionString = Environment.GetEnvironmentVariable("DUCK_DB_CONN")

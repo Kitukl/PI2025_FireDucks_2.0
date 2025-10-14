@@ -39,5 +39,38 @@ namespace ConsoleApp.models
             cmd.Parameters.AddWithValue("@id", id);
             cmd.ExecuteNonQuery();
         }
+
+        public void GenerateSubjects()
+        {
+            var subjects = new List<string>
+            {
+                "Дискретна математика",
+                "Матаналіз",
+                "Програмування",
+                "Навчальна практика",
+                "ООЕІ",
+                "Алгебра",
+                "ТІМС",
+                "Матлогіка",
+                "Диф рівняння",
+                "ТІК",
+                "Чисельні методи",
+                "Бази даних",
+                "Програмна інженерія",
+                "Веб розробка",
+                "Теорія алгоритмів",
+                "СШІ",
+                "ПТАРО"
+            };
+
+            using var conn = DB.GetConnection();
+
+            foreach (var name in subjects)
+            {
+                using var cmd = new NpgsqlCommand("INSERT INTO Subjects(name) VALUES (@name);", conn);
+                cmd.Parameters.AddWithValue("@name", name);
+                cmd.ExecuteNonQuery();
+            }
+        }
     }
 }
