@@ -1,0 +1,118 @@
+﻿.app-container {
+    display: flex;
+    height: 100vh;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+.sidebar {
+    width: 60px;
+    background-color: #f3f3f3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding-top: 10px;
+}
+
+.icon-btn {
+    border: none;
+    background: none;
+    margin: 10px 0;
+    font-size: 1.5em;
+    cursor: pointer;
+}
+
+.bottom-user {
+    margin-top: auto;
+    padding-bottom: 10px;
+    font-size: 1.8em;
+}
+
+.main-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: white;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    border-bottom: 1px solid #ccc;
+}
+
+.nav-buttons button,
+.view-selector button {
+    margin-right: 5px;
+    padding: 5px 10px;
+}
+
+.view-selector .active {
+    background-color: #0078d7;
+    color: white;
+    border-radius: 4px;
+}
+
+.week-info {
+    text-align: center;
+    margin: 5px 0;
+    color: gray;
+}
+
+.schedule-table {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 20px;
+}
+
+.schedule-table table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.schedule-table th,
+.schedule-table td {
+    border: 1px solid #ddd;
+    text-align: center;
+    height: 40px;
+}
+
+.schedule-table th {
+    background-color: #f9f9f9;
+    position: sticky;
+    top: 0;
+}
+
+.schedule-table td:first-child {
+    width: 70px;
+    background-color: #fafafa;
+}
+
+
+
+
+.upload-section {
+    margin-top: 30px;
+    text-align: center;
+}
+
+input[type=file] {
+    border: 2px dashed #aaa;
+    border-radius: 10px;
+    padding: 20px;
+    width: 60%;
+    margin: 15px auto;
+    display: block;
+    cursor: pointer;
+}
+
+.parse-btn {
+    padding: 10px 20px;
+    background-color: #0078d7;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    margin-top: 10px;
+}
