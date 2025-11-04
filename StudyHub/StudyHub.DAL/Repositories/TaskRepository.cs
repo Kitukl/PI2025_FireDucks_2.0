@@ -60,4 +60,11 @@ public class TaskRepository : IBaseRepository<DAL.Entities.Task>
 
         return task ?? throw new Exception("Task not found");
     }
+
+    public async Task<List<DAL.Entities.Task>> GetByUser(int userId)
+    {
+        return await _context.Tasks
+            .Where(t => t.User.Id == userId)
+            .ToListAsync();
+    }
 }

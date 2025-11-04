@@ -1,4 +1,5 @@
 ﻿using Microsoft.Extensions.Logging;
+using StudyHub.BLL.Queries.TaskQueries;
 
 namespace StudyHub;
 
@@ -12,6 +13,11 @@ public static class MauiProgram
             .ConfigureFonts(fonts => { fonts.AddFont("OpenSans-Regular.ttf", "OpenSansRegular"); });
 
         builder.Services.AddMauiBlazorWebView();
+        builder.Services.AddMediatR(cfg =>
+        {
+            cfg.RegisterServicesFromAssembly(typeof(GetUserTasksQueryHandler).Assembly);
+        });
+
 
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();
