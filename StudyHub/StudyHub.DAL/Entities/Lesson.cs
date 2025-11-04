@@ -11,5 +11,4 @@ public class Lesson
     public string Type { get; set; } 
     public string Room { get; set; }
     public string Day { get; set; } 
-
 }
