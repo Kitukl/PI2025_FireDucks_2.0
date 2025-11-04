@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace StudyHub.DAL.Entities;
 
 public class Task
@@ -8,6 +10,7 @@ public class Task
     public DateTime Deadline { get; set; }
     public DateTime CreationDate { get; set; }
     public Status Status { get; set; }
+    [JsonIgnore]
     public User User { get; set; }
     public List<Comments> CommentsList { get; set; }
 }
