@@ -1,5 +1,7 @@
 ﻿using Microsoft.Extensions.Logging;
+using StudyHub.BLL.Queries.Storage;
 using StudyHub.BLL.Queries.TaskQueries;
+using StudyHub.BLL.Services;
 
 namespace StudyHub;
 
@@ -17,6 +19,8 @@ public static class MauiProgram
         {
             cfg.RegisterServicesFromAssembly(typeof(GetUserTasksQueryHandler).Assembly);
         });
+        
+        builder.Services.AddSingleton<IFileStorageService, LocalFileStorageService>();
 
 
 #if DEBUG
