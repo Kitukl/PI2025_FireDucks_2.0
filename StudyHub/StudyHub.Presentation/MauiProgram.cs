@@ -20,7 +20,8 @@ public static class MauiProgram
             cfg.RegisterServicesFromAssembly(typeof(GetUserTasksQueryHandler).Assembly);
         });
         
-        builder.Services.AddSingleton<IFileStorageService, LocalFileStorageService>();
+        builder.Services.AddSingleton<IFileStorageService>(sp =>
+            new LocalFileStorageService(FileSystem.AppDataDirectory));
 
 
 #if DEBUG
