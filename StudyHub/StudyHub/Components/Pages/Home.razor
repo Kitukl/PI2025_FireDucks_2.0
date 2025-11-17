@@ -1,23 +1,132 @@
 ﻿@page "/"
 
-<div class="app-container">
-    <div class="sidebar">
-        <NavLink class="icon-btn" href="/">
-            <i class="bi bi-house"></i>
-        </NavLink>
+<div class="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-8">
+    <div class="relative w-full max-w-2xl">
 
-        <NavLink class="icon-btn" href="/schedule">
-            <i class="bi bi-calendar"></i>
-        </NavLink>
+        <button @onclick="ToggleInfo"
+                class="absolute top-4 right-4 w-10 h-10 rounded-full bg-white shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center text-gray-600 hover:text-blue-600 z-10">
+            <span class="text-xl font-bold">ℹ️</span>
+        </button>
 
-        <button class="icon-btn"><i class="bi bi-folder"></i></button>
+        <div class="bg-white rounded-3xl shadow-2xl p-12 relative overflow-hidden">
 
-        <div class="bottom-user">
-            <i class="bi bi-person-circle"></i>
+            <div class="absolute top-0 right-0 w-64 h-64 bg-blue-100 rounded-full opacity-20 -mr-32 -mt-32"></div>
+            <div class="absolute bottom-0 left-0 w-48 h-48 bg-indigo-100 rounded-full opacity-20 -ml-24 -mb-24"></div>
+
+            <div class="text-center mb-12 relative z-10">
+                <div class="flex items-center justify-center gap-4 mb-4">
+                    <svg class="w-16 h-16 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 3L1 9L5 11.18V17.18L12 21L19 17.18V11.18L21 10.09V17H23V9L12 3M18.82 9L12 12.72L5.18 9L12 5.28L18.82 9M17 16L12 18.72L7 16V12.27L12 15L17 12.27V16Z" />
+                    </svg>
+                    <h1 class="text-5xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                        STUDYHUB
+                    </h1>
+                </div>
+                <p class="text-gray-500 text-sm">BY FIREDUCKS</p>
+            </div>
+
+            <div class="grid grid-cols-2 gap-6 mb-8 relative z-10">
+
+                <a href="/profile" class="group">
+                    <div class="bg-white border-2 border-gray-200 rounded-2xl p-6 text-center transition-all duration-300 hover:border-blue-500 hover:shadow-xl hover:-translate-y-1 cursor-pointer">
+                        <div class="text-4xl mb-3 group-hover:scale-110 transition-transform duration-300">👤</div>
+                        <h3 class="text-lg font-semibold text-gray-800 group-hover:text-blue-600 transition-colors">Go to my profile</h3>
+                    </div>
+                </a>
+
+                <a href="/taskboard" class="group">
+                    <div class="bg-white border-2 border-gray-200 rounded-2xl p-6 text-center transition-all duration-300 hover:border-blue-500 hover:shadow-xl hover:-translate-y-1 cursor-pointer">
+                        <div class="text-4xl mb-3 group-hover:scale-110 transition-transform duration-300">📋</div>
+                        <h3 class="text-lg font-semibold text-gray-800 group-hover:text-blue-600 transition-colors">Task Board</h3>
+                    </div>
+                </a>
+
+                <a href="/schedule" class="group">
+                    <div class="bg-white border-2 border-gray-200 rounded-2xl p-6 text-center transition-all duration-300 hover:border-blue-500 hover:shadow-xl hover:-translate-y-1 cursor-pointer">
+                        <div class="text-4xl mb-3 group-hover:scale-110 transition-transform duration-300">📅</div>
+                        <h3 class="text-lg font-semibold text-gray-800 group-hover:text-blue-600 transition-colors">My Schedule</h3>
+                    </div>
+                </a>
+
+                <a href="/storage" class="group">
+                    <div class="bg-white border-2 border-gray-200 rounded-2xl p-6 text-center transition-all duration-300 hover:border-blue-500 hover:shadow-xl hover:-translate-y-1 cursor-pointer">
+                        <div class="text-4xl mb-3 group-hover:scale-110 transition-transform duration-300">💾</div>
+                        <h3 class="text-lg font-semibold text-gray-800 group-hover:text-blue-600 transition-colors">Storage</h3>
+                    </div>
+                </a>
+
+            </div>
+
+            <div class="flex justify-end relative z-10">
+                <img src="images/fireduck.png"
+                     alt="FireDucks"
+                     class="w-32 h-32 object-contain animate-bounce-slow" />
+                     </div>
+
         </div>
-    </div>
 
-    <div class="main-content home">
-        <h1 style="margin:auto;">Welcome to StudyHub</h1>
+        @if (showInfo)
+        {
+            <div class="absolute top-16 right-4 w-80 bg-white rounded-2xl shadow-2xl p-6 z-20 animate-fade-in border-2 border-blue-200">
+                <div class="flex justify-between items-start mb-4">
+                    <h3 class="text-lg font-bold text-gray-800">About StudyHub</h3>
+                    <button @onclick="ToggleInfo" class="text-gray-400 hover:text-gray-600">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+                <p class="text-gray-600 text-sm leading-relaxed">
+                    StudyHub is a productivity app designed to help you stay organized and never miss a deadline.
+                    It lets you manage your tasks with statuses and due dates in a simple kanban board,
+                    so you can clearly track your progress.
+                </p>
+                <div class="mt-4 pt-4 border-t border-gray-200">
+                    <p class="text-xs text-gray-500 italic">Made with ❤️ by FireDucks</p>
+                </div>
+            </div>
+        }
+
     </div>
 </div>
+
+<style>
+    @@keyframes bounce-slow {
+        0%, 100% {
+            transform: translateY(0);
+        }
+
+        50% {
+            transform: translateY(-10px);
+        }
+    }
+
+    @@keyframes fade-in {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    .animate-bounce-slow {
+        animation: bounce-slow 3s ease-in-out infinite;
+    }
+
+    .animate-fade-in {
+        animation: fade-in 0.3s ease-out;
+    }
+</style>
+
+@code {
+    private bool showInfo = false;
+
+    private void ToggleInfo()
+    {
+        showInfo = !showInfo;
+    }
+}
