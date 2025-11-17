@@ -13,6 +13,7 @@ public class CreateCommandHandler : IRequestHandler<CreateCommand, int>
         _taskRepository = taskRepository;
         _userRepository = userRepository;
     }
+
     public async Task<int> Handle(CreateCommand request, CancellationToken cancellationToken)
     {
         var user = await _userRepository.GetById(request.userId);

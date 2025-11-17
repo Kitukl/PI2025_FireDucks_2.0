@@ -17,7 +17,7 @@ public class LoginCommandHandler : IRequestHandler<LoginCommand, UserLoginRespon
         var user = await _userRepository.GetByEmail(request.email);
         if (user == null)
             throw new InvalidOperationException("Користувача з таким email не знайдено");
-        
+
         bool isPasswordValid = BCrypt.Net.BCrypt.Verify(request.password, user.Password);
         if (!isPasswordValid)
             throw new InvalidOperationException("Невірний пароль");

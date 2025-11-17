@@ -8,16 +8,25 @@ public class StudyContext : DbContext
 {
 
     public DbSet<User> Users { get; set; }
+
     public DbSet<Task> Tasks { get; set; }
+
     public DbSet<SupportTicket> Tickets { get; set; }
+
     public DbSet<Subject> Subjects { get; set; }
+
     public DbSet<Schedule> Schedules { get; set; }
+
     public DbSet<LessonSlots> LessonSlots { get; set; }
+
     public DbSet<Lesson> Lessons { get; set; }
+
     public DbSet<Lecturer> Lecturers { get; set; }
+
     public DbSet<Comments> Comments { get; set; }
+
     public DbSet<Category> Categories { get; set; }
-    
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(StudyContext).Assembly);
