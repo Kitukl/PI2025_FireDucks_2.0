@@ -27,6 +27,35 @@ namespace ConsoleApp.models
             SubjectId = subjectId;
         }
 
+        public List<Task> GetAll()
+        {
+            using var conn = DB.GetConnection();
+            string sql = "SELECT * FROM Tasks";
+            using var cmd = new NpgsqlCommand(sql, conn);
+            using var reader = cmd.ExecuteReader();
+
+            var list = new List<Task>();
+            while (reader.Read())
+            {
+                var t = ReadTask(reader);
+                list.Add(t);
+            }
+            return list;
+        }
+
+        public Task GetById(int id)
+        {
+            using var conn = DB.GetConnection();
+            string sql = "SELECT * FROM Tasks WHERE task_id=@id";
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@id", id);
+
+            using var reader = cmd.ExecuteReader();
+            if (!reader.Read()) return null;
+
+            return ReadTask(reader);
+        }
+
 
         public Task CreateTask()
         {

@@ -15,6 +15,44 @@ namespace ConsoleApp.models
             StartLesson = start;
             EndLesson = end;
         }
+        public List<LessonSlot> GetAll()
+        {
+            using var conn = DB.GetConnection();
+            string sql = "SELECT * FROM Lessons_Slots";
+            using var cmd = new NpgsqlCommand(sql, conn);
+            using var reader = cmd.ExecuteReader();
+
+            var list = new List<LessonSlot>();
+            while (reader.Read())
+            {
+                list.Add(new LessonSlot
+                {
+                    Id = reader.GetInt32(reader.GetOrdinal("slot_id")),
+                    StartLesson = TimeOnly.FromTimeSpan(reader.GetTimeSpan(reader.GetOrdinal("startLesson"))),
+                    EndLesson = TimeOnly.FromTimeSpan(reader.GetTimeSpan(reader.GetOrdinal("endLesson")))
+                });
+            }
+            return list;
+        }
+
+        public LessonSlot GetById(int id)
+        {
+            using var conn = DB.GetConnection();
+            string sql = "SELECT * FROM Lessons_Slots WHERE slot_id=@id";
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@id", id);
+
+            using var reader = cmd.ExecuteReader();
+            if (!reader.Read()) return null;
+
+            return new LessonSlot
+            {
+                Id = reader.GetInt32(reader.GetOrdinal("slot_id")),
+                StartLesson = TimeOnly.FromTimeSpan(reader.GetTimeSpan(reader.GetOrdinal("startLesson"))),
+                EndLesson = TimeOnly.FromTimeSpan(reader.GetTimeSpan(reader.GetOrdinal("endLesson")))
+            };
+        }
+
 
 
         public void UpdateTimeSlot(int id, TimeOnly start, TimeOnly end)

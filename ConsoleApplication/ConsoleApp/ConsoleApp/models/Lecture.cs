@@ -88,4 +88,42 @@ public class Lecture
             cmd.ExecuteNonQuery();
         }
     }
+    public List<Lecture> GetAll()
+    {
+        using var conn = DB.GetConnection();
+        string sql = "SELECT * FROM Lectures";
+        using var cmd = new NpgsqlCommand(sql, conn);
+        using var reader = cmd.ExecuteReader();
+
+        var list = new List<Lecture>();
+        while (reader.Read())
+        {
+            list.Add(new Lecture
+            {
+                Id = reader.GetInt32(reader.GetOrdinal("lecture_id")),
+                Name = reader["name"] as string,
+                Surname = reader["surname"] as string
+            });
+        }
+        return list;
+    }
+
+    public Lecture GetById(int id)
+    {
+        using var conn = DB.GetConnection();
+        string sql = "SELECT * FROM Lectures WHERE lecture_id=@id";
+        using var cmd = new NpgsqlCommand(sql, conn);
+        cmd.Parameters.AddWithValue("@id", id);
+
+        using var reader = cmd.ExecuteReader();
+        if (!reader.Read()) return null;
+
+        return new Lecture
+        {
+            Id = reader.GetInt32(reader.GetOrdinal("lecture_id")),
+            Name = reader["name"] as string,
+            Surname = reader["surname"] as string
+        };
+    }
+
 }
