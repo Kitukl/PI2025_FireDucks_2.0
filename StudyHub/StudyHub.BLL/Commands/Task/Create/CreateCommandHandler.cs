@@ -17,6 +17,7 @@ public class CreateCommandHandler : IRequestHandler<CreateCommand, int>
     public async Task<int> Handle(CreateCommand request, CancellationToken cancellationToken)
     {
         var user = await _userRepository.GetById(request.userId);
+        if (user == null) throw new InvalidOperationException("Користувача не знайдено");
         var task = new DAL.Entities.Task()
         {
             CreationDate = DateTime.Now,
