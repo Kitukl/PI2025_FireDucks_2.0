@@ -1,6 +1,6 @@
 using StudyHub.BLL.Services;
 
-namespace StudyHub.TestProject;
+namespace StudyHub.UnitTests;
 
 public class LocalFileStorageServiceTests : IDisposable
 {

@@ -12,7 +12,7 @@ public class UserRepository : IBaseRepository<User>
         _context = context;
     }
 
-    public async Task<User> CreateAsync(User item)
+    public virtual async Task<User> CreateAsync(User item)
     {
         await _context.Users.AddAsync(item);
         await _context.SaveChangesAsync();
@@ -20,17 +20,17 @@ public class UserRepository : IBaseRepository<User>
         return item;
     }
 
-    public async Task<User> GetByEmail(string email)
+    public virtual async Task<User> GetByEmail(string email)
     {
         return await _context.Users
             .FirstOrDefaultAsync(e => e.Email == email) ?? throw new Exception("Not found user with this email");
     }
-    public async Task<List<User>> GetAll()
+    public virtual async Task<List<User>> GetAll()
     {
         return await _context.Users.ToListAsync();
     }
 
-    public async Task<int> UpdateAsync(User item)
+    public virtual async Task<int> UpdateAsync(User item)
     {
         await _context.Users
             .Where(u => u.Id == item.Id)
@@ -50,7 +50,7 @@ public class UserRepository : IBaseRepository<User>
         return item.Id;
     }
 
-    public async Task<int> DeleteAsync(int id)
+    public virtual async Task<int> DeleteAsync(int id)
     {
         await _context.Users
             .Where(u => u.Id == id)
@@ -60,7 +60,7 @@ public class UserRepository : IBaseRepository<User>
         return id;
     }
 
-    public async Task<User> GetById(int id)
+    public virtual async Task<User> GetById(int id)
     {
         var user = await _context.Users
             .FirstOrDefaultAsync(u => u.Id == id);
