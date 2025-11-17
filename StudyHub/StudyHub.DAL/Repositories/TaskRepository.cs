@@ -12,7 +12,7 @@ public class TaskRepository : IBaseRepository<DAL.Entities.Task>
         _context = context;
     }
 
-    public async Task<DAL.Entities.Task> CreateAsync(DAL.Entities.Task item)
+    public virtual async Task<DAL.Entities.Task> CreateAsync(DAL.Entities.Task item)
     {
         await _context.Tasks.AddAsync(item);
         await _context.SaveChangesAsync();
@@ -20,12 +20,12 @@ public class TaskRepository : IBaseRepository<DAL.Entities.Task>
         return item;
     }
 
-    public async Task<List<DAL.Entities.Task>> GetAll()
+    public virtual async Task<List<DAL.Entities.Task>> GetAll()
     {
         return await _context.Tasks.ToListAsync();
     }
 
-    public async Task<int> UpdateAsync(DAL.Entities.Task item)
+    public virtual async Task<int> UpdateAsync(DAL.Entities.Task item)
     {
         await _context.Tasks
             .Where(u => u.Id == item.Id)
@@ -43,7 +43,7 @@ public class TaskRepository : IBaseRepository<DAL.Entities.Task>
         return item.Id;
     }
 
-    public async Task<int> DeleteAsync(int id)
+    public virtual async Task<int> DeleteAsync(int id)
     {
         await _context.Tasks
             .Where(u => u.Id == id)
@@ -53,7 +53,7 @@ public class TaskRepository : IBaseRepository<DAL.Entities.Task>
         return id;
     }
 
-    public async Task<DAL.Entities.Task> GetById(int id)
+    public virtual async Task<DAL.Entities.Task> GetById(int id)
     {
         var task = await _context.Tasks
             .FirstOrDefaultAsync(u => u.Id == id);

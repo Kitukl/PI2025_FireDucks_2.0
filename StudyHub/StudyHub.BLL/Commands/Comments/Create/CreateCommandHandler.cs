@@ -10,7 +10,7 @@ public class CreateCommandHandler : IRequestHandler<CreateCommand, int>
 
     public CreateCommandHandler(CommentsRepository repository, TaskRepository taskRepository)
     {
-        _repository = repository;`
+        _repository = repository;
         _taskRepository = taskRepository;
     }
 
