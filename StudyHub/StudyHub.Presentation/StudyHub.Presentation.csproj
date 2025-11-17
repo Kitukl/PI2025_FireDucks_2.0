@@ -61,9 +61,17 @@
 
     <ItemGroup>
         <PackageReference Include="MediatR" Version="13.1.0" />
+        <PackageReference Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="9.0.0">
+          <PrivateAssets>all</PrivateAssets>
+          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
         <PackageReference Include="Microsoft.Maui.Controls" Version="9.0.120" />
         <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="9.0.120" />
         <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.10" />
+        <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.556">
+          <PrivateAssets>all</PrivateAssets>
+          <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
     </ItemGroup>
 
     <ItemGroup>
