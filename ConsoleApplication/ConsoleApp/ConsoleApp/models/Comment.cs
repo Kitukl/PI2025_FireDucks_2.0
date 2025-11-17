@@ -70,6 +70,44 @@ namespace ConsoleApp.models
             }
             return list;
         }
+        public List<Comment> GetAll()
+        {
+            using var conn = DB.GetConnection();
+            string sql = "SELECT * FROM Comments";
+            using var cmd = new NpgsqlCommand(sql, conn);
+            using var reader = cmd.ExecuteReader();
 
+            var list = new List<Comment>();
+            while (reader.Read())
+            {
+                list.Add(new Comment
+                {
+                    Id = reader.GetInt32(reader.GetOrdinal("comment_id")),
+                    Description = reader["description"] as string,
+                    CreationDate = reader.GetDateTime(reader.GetOrdinal("creationDate")),
+                    TaskId = reader.GetInt32(reader.GetOrdinal("task_id"))
+                });
+            }
+            return list;
+        }
+
+        public Comment GetById(int id)
+        {
+            using var conn = DB.GetConnection();
+            string sql = "SELECT * FROM Comments WHERE comment_id=@id";
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@id", id);
+
+            using var reader = cmd.ExecuteReader();
+            if (!reader.Read()) return null;
+
+            return new Comment
+            {
+                Id = reader.GetInt32(reader.GetOrdinal("comment_id")),
+                Description = reader["description"] as string,
+                CreationDate = reader.GetDateTime(reader.GetOrdinal("creationDate")),
+                TaskId = reader.GetInt32(reader.GetOrdinal("task_id"))
+            };
+        }
     }
 }

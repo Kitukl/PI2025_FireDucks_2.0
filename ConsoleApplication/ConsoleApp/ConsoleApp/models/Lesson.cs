@@ -27,6 +27,47 @@ namespace ConsoleApp.models
             SubjectId = subjectId;
             SlotId = slotId;
         }
+        
+        public List<Lesson> GetAll()
+        {
+            using var conn = DB.GetConnection();
+            string sql = "SELECT * FROM Lessons";
+            using var cmd = new NpgsqlCommand(sql, conn);
+            using var reader = cmd.ExecuteReader();
+
+            var list = new List<Lesson>();
+            while (reader.Read())
+            {
+                list.Add(new Lesson
+                {
+                    Id = reader.GetInt32(reader.GetOrdinal("lesson_id")),
+                    LectureId = reader.GetInt32(reader.GetOrdinal("lecture_id")),
+                    SubjectId = reader.GetInt32(reader.GetOrdinal("subject_id")),
+                    SlotId = reader.GetInt32(reader.GetOrdinal("slot_id"))
+                });
+            }
+            return list;
+        }
+
+        public Lesson GetById(int id)
+        {
+            using var conn = DB.GetConnection();
+            string sql = "SELECT * FROM Lessons WHERE lesson_id=@id";
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@id", id);
+
+            using var reader = cmd.ExecuteReader();
+            if (!reader.Read()) return null;
+
+            return new Lesson
+            {
+                Id = reader.GetInt32(reader.GetOrdinal("lesson_id")),
+                LectureId = reader.GetInt32(reader.GetOrdinal("lecture_id")),
+                SubjectId = reader.GetInt32(reader.GetOrdinal("subject_id")),
+                SlotId = reader.GetInt32(reader.GetOrdinal("slot_id"))
+            };
+        }
+
 
         public void UpdateLesson(int lectureId, int subjectId, int slotId)
         {
