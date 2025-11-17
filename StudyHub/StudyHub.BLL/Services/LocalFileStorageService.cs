@@ -1,12 +1,16 @@
 using Microsoft.VisualBasic.FileIO;
-using Microsoft.Maui;
 
 namespace StudyHub.BLL.Services;
 
 public class LocalFileStorageService : IFileStorageService
 {
-    private readonly string _rootPath = FileSystem.AppDataDirectory;
+    private readonly string _rootPath;
 
+    public LocalFileStorageService(string? rootPath = null)
+    {
+        _rootPath = rootPath;
+    }
+    
     public Task<IEnumerable<string>> GetFoldersAsync(string path)
     {
         string fullPath = Path.Combine(_rootPath, path);
