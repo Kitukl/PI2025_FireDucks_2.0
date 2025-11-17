@@ -25,6 +25,7 @@ public class UserRepository : IBaseRepository<User>
         return await _context.Users
             .FirstOrDefaultAsync(e => e.Email == email) ?? throw new Exception("Not found user with this email");
     }
+
     public async Task<List<User>> GetAll()
     {
         return await _context.Users.ToListAsync();

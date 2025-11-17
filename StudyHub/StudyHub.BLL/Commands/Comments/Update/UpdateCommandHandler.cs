@@ -11,6 +11,7 @@ public class UpdateCommandHandler : IRequestHandler<UpdateCommand, int>
     {
         _repository = repository;
     }
+
     public async Task<int> Handle(UpdateCommand request, CancellationToken cancellationToken)
     {
         return await _repository.UpdateAsync(request.comment);

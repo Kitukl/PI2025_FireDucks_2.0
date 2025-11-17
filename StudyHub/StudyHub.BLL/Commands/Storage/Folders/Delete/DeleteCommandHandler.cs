@@ -11,6 +11,7 @@ public class DeleteCommandHandler : IRequestHandler<DeleteCommand, int>
     {
         _repository = repository;
     }
+
     public async Task<int> Handle(DeleteCommand request, CancellationToken cancellationToken)
     {
         return await _repository.DeleteAsync(request.id);

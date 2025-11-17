@@ -19,10 +19,9 @@ public static class MauiProgram
         {
             cfg.RegisterServicesFromAssembly(typeof(GetUserTasksQueryHandler).Assembly);
         });
-        
+
         builder.Services.AddSingleton<IFileStorageService>(sp =>
             new LocalFileStorageService(FileSystem.AppDataDirectory));
-
 
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();
