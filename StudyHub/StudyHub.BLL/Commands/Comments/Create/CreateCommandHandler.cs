@@ -17,6 +17,11 @@ public class CreateCommandHandler : IRequestHandler<CreateCommand, int>
     public async Task<int> Handle(CreateCommand request, CancellationToken cancellationToken)
     {
         var task = await _taskRepository.GetById(request.taskId);
+        if (task is null)
+        {
+            throw new InvalidOperationException();
+        }
+
         var comment = new DAL.Entities.Comments
         {
             Description = request.description,

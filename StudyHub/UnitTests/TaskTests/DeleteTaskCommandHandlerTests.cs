@@ -5,17 +5,17 @@ using Xunit;
 using System.Threading;
 using System.Threading.Tasks;
 
-public class DeleteCommandHandlerTests
+public class DeleteTaskCommandHandlerTests
 {
     private readonly Mock<TaskRepository> _mockTaskRepository;
-    private readonly DeleteCommandHandler _handler;
+    private readonly DeleteTaskCommandHandler _handler;
 
     private const int TaskIdToDelete = 15;
 
-    public DeleteCommandHandlerTests()
+    public DeleteTaskCommandHandlerTests()
     {
         _mockTaskRepository = new Mock<TaskRepository>(new object[] { null });
-        _handler = new DeleteCommandHandler(_mockTaskRepository.Object);
+        _handler = new DeleteTaskCommandHandler(_mockTaskRepository.Object);
     }
 
     [Fact]
