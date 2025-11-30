@@ -3,11 +3,11 @@ using StudyHub.DAL.Repositories;
 
 namespace StudyHub.BLL.Commands.Storage.Folder.Delete;
 
-public class DeleteCommandHandler : IRequestHandler<DeleteCommand, int>
+public class DeleteTaskCommandHandler : IRequestHandler<DeleteCommand, int>
 {
     private readonly CommentsRepository _repository;
 
-    public DeleteCommandHandler(CommentsRepository repository)
+    public DeleteTaskCommandHandler(CommentsRepository repository)
     {
         _repository = repository;
     }

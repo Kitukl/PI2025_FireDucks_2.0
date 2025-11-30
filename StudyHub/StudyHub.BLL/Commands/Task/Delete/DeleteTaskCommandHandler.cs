@@ -3,11 +3,11 @@ using StudyHub.DAL.Repositories;
 
 namespace StudyHub.BLL.Commands.Task.Delete;
 
-public class DeleteCommandHandler : IRequestHandler<DeleteCommand, int>
+public class DeleteTaskCommandHandler : IRequestHandler<DeleteCommand, int>
 {
     private readonly TaskRepository _taskRepository;
 
-    public DeleteCommandHandler(TaskRepository taskRepository)
+    public DeleteTaskCommandHandler(TaskRepository taskRepository)
     {
         _taskRepository = taskRepository;
     }

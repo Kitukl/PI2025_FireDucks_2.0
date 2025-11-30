@@ -3,11 +3,11 @@ using StudyHub.BLL.Services;
 
 namespace StudyHub.BLL.Commands.Storage.Files.Delete;
 
-public class DeleteCommandHandler : IRequestHandler<DeleteCommand>
+public class DeleteTaskCommandHandler : IRequestHandler<DeleteCommand>
 {
     private readonly IFileStorageService _fileStorage;
 
-    public DeleteCommandHandler(IFileStorageService fileStorage)
+    public DeleteTaskCommandHandler(IFileStorageService fileStorage)
     {
         _fileStorage = fileStorage;
     }
