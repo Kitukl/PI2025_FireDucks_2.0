@@ -10,12 +10,10 @@ public record GetTaskCommentsQuery(int TaskId) : IRequest<List<Comments>>;
 
 public class GetTaskCommentsQueryHandler : IRequestHandler<GetTaskCommentsQuery, List<Comments>>
 {
-    private readonly CommentsRepository _commentsRepository;
     private readonly StudyContext _context;
 
-    public GetTaskCommentsQueryHandler(CommentsRepository commentsRepository, StudyContext context)
+    public GetTaskCommentsQueryHandler(StudyContext context)
     {
-        _commentsRepository = commentsRepository;
         _context = context;
     }
 
