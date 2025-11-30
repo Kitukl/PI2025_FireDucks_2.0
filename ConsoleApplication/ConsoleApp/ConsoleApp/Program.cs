@@ -3,7 +3,7 @@ using Task = ConsoleApp.models.Task;
 
 namespace ConsoleApp
 {
-    class Program
+    static class Program
     {
         static void Main()
         {
