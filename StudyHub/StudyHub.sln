@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.14.36511.14 d17.14
+VisualStudioVersion = 17.14.36511.14
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StudyHub.Presentation", "StudyHub.Presentation\StudyHub.Presentation.csproj", "{B2E16453-1D57-4EAE-A7F6-A7B764340132}"
 EndProject
@@ -35,5 +35,11 @@ Global
 		{321299F3-664C-41F9-9BE4-5CF63126BB33}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{321299F3-664C-41F9-9BE4-5CF63126BB33}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{321299F3-664C-41F9-9BE4-5CF63126BB33}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {9BD3455B-799E-4D64-B4B0-20E9A738D679}
 	EndGlobalSection
 EndGlobal

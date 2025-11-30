@@ -30,7 +30,7 @@ namespace StudyHub.BLL.Commands.User.Register
                 IsNotified = false,
                 Schedule = new List<Schedule>(),
                 Tasks = new List<DAL.Entities.Task>(),
-                Tickets = new List<SupportTicket>()
+                Tickets = new List<SupportTicket>(),
             };
 
             var created = await _userRepository.CreateAsync(user);

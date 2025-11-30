@@ -10,12 +10,12 @@ public class LocalFileStorageService : IFileStorageService
     {
         _rootPath = rootPath;
     }
-    
+
     public Task<IEnumerable<string>> GetFoldersAsync(string path)
     {
         string fullPath = Path.Combine(_rootPath, path);
         var folders = Directory.GetDirectories(fullPath).Select(Path.GetFileName);
-        
+
         return Task.FromResult(folders);
     }
 
@@ -23,21 +23,21 @@ public class LocalFileStorageService : IFileStorageService
     {
         string fullPath = Path.Combine(_rootPath, path);
         var files = Directory.GetFiles(fullPath).Select(Path.GetFileName);
-        
+
         return Task.FromResult(files);
     }
 
     public Task CreateFolderAsync(string path)
     {
         Directory.CreateDirectory(Path.Combine(_rootPath, path));
-        
+
         return Task.CompletedTask;
     }
 
     public Task DeleteFileAsync(string filePath)
     {
         File.Delete(Path.Combine(_rootPath, filePath));
-        
+
         return Task.CompletedTask;
     }
 
