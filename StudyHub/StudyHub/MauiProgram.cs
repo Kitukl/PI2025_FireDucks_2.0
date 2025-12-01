@@ -1,8 +1,9 @@
 ﻿using Microsoft.Extensions.Logging;
+using StudyHub.BLL.Interfaces;
 using StudyHub.BLL.Services;
+using StudyHub.DAL;
 using StudyHub.DAL.Entities;
 using StudyHub.DAL.Repositories;
-using StudyHub.DAL;
 
 namespace StudyHub
 {
@@ -28,6 +29,8 @@ namespace StudyHub
             builder.Services.AddScoped<IBaseRepository<Schedule>, ScheduleRepository>();
 
             builder.Services.AddScoped<IBaseRepository<LessonSlots>, LessonSlotsRepository>();
+
+            builder.Services.AddScoped<IParserRunner, ParserRunner>();
 
             builder.Services.AddScoped<ScheduleService>();
 
