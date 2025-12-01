@@ -1700,6 +1700,12 @@ h4 {
 
 .week-select,
 .group-select {
+    max-width:150px;
+
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+
     padding: 10px 16px;
     background-color: #2888bb;
     color: #212f3c;
