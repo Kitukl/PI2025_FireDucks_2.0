@@ -67,9 +67,9 @@ public class ScheduleDownloaderService : IScheduleDownloaderService
 {
     public async Task<string> DownloadSchedulePdfAsync(IFacultyHelper faculty, string groupName)
     {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows) && !RuntimeInformation.IsOSPlatform(OSPlatform.Linux) && !RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
         {
-            throw new PlatformNotSupportedException("Playwright працює тільки на Windows.");
+            throw new PlatformNotSupportedException("Playwright працює тільки на Windows, MacOS, Linux");
         }
 
         string searchCriteria = faculty.GetLinkSearchCriteria(groupName);
