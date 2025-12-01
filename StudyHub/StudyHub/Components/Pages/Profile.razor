@@ -1,39 +1,218 @@
 ﻿@page "/profile"
+@inject NavigationManager Navigation
 
-<div class="min-h-screen bg-gradient-to-br from-purple-50 to-pink-100 flex items-center justify-center p-8">
-    <div class="bg-white rounded-3xl shadow-2xl p-12 max-w-2xl w-full">
-        <div class="text-center mb-8">
-            <div class="text-6xl mb-4">👤</div>
-            <h1 class="text-4xl font-bold text-gray-800 mb-2">My Profile</h1>
-            <p class="text-gray-500">Manage your personal information</p>
+<div class="profile-container">
+    <button class="logout-btn" @onclick="LogOut">Log Out</button>
+    <div class="profile-left">
+        <div class="profile-photo-section">
+            <div class="profile-photo-frame">
+                <div class="profile-avatar">
+                    <svg viewBox="0 0 200 240" class="avatar-svg">
+                        <!-- Head circle -->
+                        <circle cx="100" cy="80" r="50" fill="#999999"/>
+                        <!-- Body shape -->
+                        <ellipse cx="100" cy="200" rx="75" ry="60" fill="#999999"/>
+                    </svg>
+                </div>
+            </div>
+            <button class="choose-photo-btn">Choose Profile Photo</button>
         </div>
 
-        <div class="space-y-4 mb-8">
-            <div class="p-4 bg-gray-50 rounded-xl">
-                <p class="text-sm text-gray-600">Name</p>
-                <p class="text-lg font-semibold">Student Name</p>
-            </div>
-            <div class="p-4 bg-gray-50 rounded-xl">
-                <p class="text-sm text-gray-600">Group</p>
-                <p class="text-lg font-semibold">Select your group</p>
-            </div>
-            <div class="p-4 bg-gray-50 rounded-xl">
-                <p class="text-sm text-gray-600">University</p>
-                <p class="text-lg font-semibold">LNU</p>
+        <div class="profile-name-section">
+            <h2 class="profile-name">Name Surname</h2>
+            <div class="profile-group">
+                <label>Group:</label>
+                <select class="group-select">
+                    <option value="PMI-31">PMI-31</option>
+                    <option value="PMI-32">PMI-32</option>
+                    <option value="PMI-33">PMI-33</option>
+                    <option value="PMI-34">PMI-34</option>
+                </select>
             </div>
         </div>
 
-        <div class="flex gap-4 mb-4">
-            <a href="/login" class="block w-full bg-blue-500 text-white text-center py-3 rounded-xl font-semibold hover:bg-blue-600 transition-all">
-                Логін
-            </a>
-            <a href="/register" class="block w-full bg-green-500 text-white text-center py-3 rounded-xl font-semibold hover:bg-green-600 transition-all">
-                Реєстрація
-            </a>
-        </div>
+        <div class="settings-section">
+            <h3 class="settings-title">Settings</h3>
+            
+            <div class="setting-item">
+                <div class="setting-icon-wrapper">
+                    <svg class="setting-icon" viewBox="0 0 24 24" fill="white">
+                        <!-- Telegram paper plane icon -->
+                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" fill="white"/>
+                    </svg>
+                </div>
+                <span class="setting-label">Connection is required</span>
+                <div class="qr-info-wrapper" @onmouseenter="ShowQRPopup" @onmouseleave="HideQRPopup">
+                    <button class="qr-icon-button">
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                            <rect x="3" y="3" width="8" height="8" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                            <rect x="13" y="3" width="8" height="8" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                            <rect x="3" y="13" width="8" height="8" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                            <rect x="5" y="5" width="4" height="4" fill="currentColor"/>
+                            <rect x="15" y="5" width="4" height="4" fill="currentColor"/>
+                            <rect x="5" y="15" width="4" height="4" fill="currentColor"/>
+                            <rect x="13" y="13" width="3" height="3" fill="currentColor"/>
+                            <rect x="17" y="13" width="4" height="4" fill="currentColor"/>
+                            <rect x="13" y="17" width="3" height="3" fill="currentColor"/>
+                        </svg>
+                    </button>
+                    @if (showQRPopup)
+                    {
+                        <div class="qr-popup">
+                            <img src="images/qr.png" alt="QR Code" style="width: 150px; height: 150px; display: block;" />
+                            <div style="text-align: center; margin-top: 8px; font-size: 14px; color: var(--text-black);">Go to Telegram</div>
+                        </div>
+                    }
+                </div>
+            </div>
 
-        <a href="/" class="block w-full bg-gradient-to-r from-purple-500 to-pink-500 text-white text-center py-4 rounded-xl font-semibold hover:shadow-lg transition-all">
-            ← Back to Home
-        </a>
+            <div class="settings-toggles">
+                <div class="toggle-item @(!isTelegramConnected ? "toggle-disabled" : "")">
+                    <span class="toggle-icon-left">🔕</span>
+                    <button class="toggle-switch-btn @(isNotificationsOn ? "toggle-on" : "toggle-off")" 
+                            @onclick="ToggleNotifications"
+                            disabled="@(!isTelegramConnected)">
+                        <span class="toggle-slider"></span>
+                    </button>
+                    <span class="toggle-icon-right">🔔</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="profile-right">
+        <div class="contact-form">
+            <div class="contact-header">
+                <h2>Contact form</h2>
+                <button class="help-btn">?</button>
+            </div>
+
+            <div class="form-group">
+                <label>Type:</label>
+                <select @bind="contactType" class="form-select">
+                    <option value="Request">Request</option>
+                    <option value="Bug Report">Bug Report</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Category: <span class="required">*</span></label>
+                <select @bind="contactCategory" class="form-select @(string.IsNullOrEmpty(contactCategory) && showValidation ? "input-error" : "")">
+                    <option value="">Choose category...</option>
+                    <option value="Schedule">Schedule</option>
+                    <option value="Infrastructure related">Infrastructure related</option>
+                    <option value="Application related">Application related</option>
+                    <option value="Feedback">Feedback</option>
+                    <option value="Other">Other</option>
+                </select>
+                @if (string.IsNullOrEmpty(contactCategory) && showValidation)
+                {
+                    <span class="validation-message">Category is required</span>
+                }
+            </div>
+
+            <div class="form-group">
+                <label>Subject <span class="required">*</span></label>
+                <input type="text" 
+                       @bind="contactSubject" 
+                       class="form-input @(string.IsNullOrWhiteSpace(contactSubject) && showValidation ? "input-error" : "")" 
+                       placeholder="Please summarize your request..." />
+                @if (string.IsNullOrWhiteSpace(contactSubject) && showValidation)
+                {
+                    <span class="validation-message">Subject is required</span>
+                }
+            </div>
+
+            <div class="form-group">
+                <label>Description <span class="required">*</span></label>
+                <textarea @bind="contactDescription"
+                          placeholder="Please describe your question/problem here..."
+                          class="description-textarea @(string.IsNullOrWhiteSpace(contactDescription) && showValidation ? "input-error" : "")"
+                          rows="6"></textarea>
+                @if (string.IsNullOrWhiteSpace(contactDescription) && showValidation)
+                {
+                    <span class="validation-message">Description is required</span>
+                }
+            </div>
+
+            <div class="form-actions">
+                <button class="send-btn" @onclick="SendContactForm">Send</button>
+            </div>
+            
+            @if (showSuccessMessage)
+            {
+                <div class="success-message">
+                    ✓ Your request has been sent successfully!
+                </div>
+            }
+        </div>
     </div>
 </div>
+
+@code {
+    private string contactType = "Request";
+    private string contactCategory = "";
+    private string contactSubject = "";
+    private string contactDescription = "";
+    
+    private bool isTelegramConnected = false;
+    private bool isNotificationsOn = false;
+    private bool showQRPopup = false;
+    private bool showValidation = false;
+    private bool showSuccessMessage = false;
+
+    private void ShowQRPopup()
+    {
+        showQRPopup = true;
+    }
+
+    private void HideQRPopup()
+    {
+        showQRPopup = false;
+    }
+
+    private void ToggleNotifications()
+    {
+        if (isTelegramConnected)
+        {
+            isNotificationsOn = !isNotificationsOn;
+            // TODO: Відправити запит на бекенд для збереження стану нотифікацій
+        }
+    }
+
+    private async Task SendContactForm()
+    {
+        showValidation = true;
+        showSuccessMessage = false;
+
+        if (string.IsNullOrEmpty(contactCategory) || 
+            string.IsNullOrWhiteSpace(contactSubject) || 
+            string.IsNullOrWhiteSpace(contactDescription))
+        {
+            return;
+        }
+
+        // TODO: Відправити форму на бекенд
+        // await SendToBackend();
+
+        // Показати повідомлення про успіх
+        showSuccessMessage = true;
+        
+        // Очистити форму
+        contactType = "Request";
+        contactCategory = "";
+        contactSubject = "";
+        contactDescription = "";
+        showValidation = false;
+
+        // Приховати повідомлення через 3 секунди
+        await Task.Delay(3000);
+        showSuccessMessage = false;
+    }
+
+    private void LogOut()
+    {
+        // TODO: Clear user session/token
+        Navigation.NavigateTo("/login");
+    }
+}

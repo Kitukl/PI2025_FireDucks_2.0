@@ -9,7 +9,14 @@
 
         protected override Window CreateWindow(IActivationState? activationState)
         {
-            return new Window(new MainPage()) { Title = "StudyHub" };
+            var window = new Window(new MainPage()) 
+            { 
+                Title = "StudyHub",
+                MinimumWidth = 1024,
+                MinimumHeight = 768
+            };
+            
+            return window;
         }
     }
 }

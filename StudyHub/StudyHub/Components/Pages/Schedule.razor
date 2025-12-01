@@ -1,160 +1,122 @@
-﻿@page "/schedule"
-@using StudyHub.DAL.Entities
-@using Microsoft.AspNetCore.Components.Forms
-@using Microsoft.Maui.Storage
-@inject StudyHub.BLL.Services.ScheduleService ScheduleService
-@inject IJSRuntime JS
-@using System.Threading.Tasks
-@using System.Linq
-@using System.IO
+@page "/schedule"
 
-<div class="app-container">
-    <div class="sidebar">
-        <NavLink class="icon-btn" href="/">
-            <i class="bi bi-house"></i>
-        </NavLink>
-
-        <NavLink class="icon-btn" href="/schedule">
-            <i class="bi bi-calendar"></i>
-        </NavLink>
-
-        <button class="icon-btn"><i class="bi bi-folder"></i></button>
-
-        <div class="bottom-user">
-            <i class="bi bi-person-circle"></i>
+<div class="schedule-container">
+    <div class="schedule-header">
+        <div class="schedule-header-left">
+            <select class="week-select">
+                <option value="current">Current Week</option>
+                <option value="next">Next Week</option>
+            </select>
+            <select class="group-select">
+                <option value="PMI-31">PMI-31</option>
+                <option value="PMI-32">PMI-32</option>
+                <option value="PMI-33">PMI-33</option>
+                <option value="PMI-34">PMI-34</option>
+            </select>
         </div>
+        <button class="refresh-schedule-btn" @onclick="RefreshSchedule">
+            <span class="refresh-icon">🔄</span>
+            Refresh Schedule
+        </button>
     </div>
 
-    <div class="main-content">
-        <header class="header">
-            <h2>Schedule</h2>
-        </header>
-
-        <div class="schedule-table">
-            <table>
-                <thead>
+    <div class="schedule-table-wrapper">
+        <table class="schedule-table">
+            <thead>
+                <tr>
+                    <th class="time-column"></th>
+                    <th>ПН</th>
+                    <th>ВТ</th>
+                    <th>СР</th>
+                    <th>ЧТ</th>
+                    <th>ПТ</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var timeSlot in timeSlots)
+                {
                     <tr>
-                        <th></th>
-                        @foreach (var day in Days)
+                        <td class="time-cell">@timeSlot</td>
+                        @for (int day = 0; day < 5; day++)
                         {
-                            <th>@day</th>
+                            <td class="lesson-cell">
+                                @if (GetLesson(day, timeSlot) != null)
+                                {
+                                    var lesson = GetLesson(day, timeSlot);
+                                    <div class="lesson-card lesson-type-@lesson.Type.ToLower()">
+                                        <div class="lesson-type">@lesson.Type</div>
+                                        <div class="lesson-subject">@lesson.Subject</div>
+                                        <div class="lesson-footer">
+                                            <div class="lesson-room">@lesson.Room</div>
+                                            <div class="lesson-lecturer">@lesson.Lecturer</div>
+                                        </div>
+                                    </div>
+                                }
+                            </td>
                         }
                     </tr>
-                </thead>
-                <tbody>
-                    @foreach (var slot in TimeSlots)
-                    {
-                        <tr>
-                            <td>@slot</td>
-                            @foreach (var day in Days)
-                            {
-                                <td>
-                                    @if (RenderedSchedule.ContainsKey(day) && RenderedSchedule[day].ContainsKey(slot))
-                                    {
-                                        foreach (var lesson in RenderedSchedule[day][slot])
-                                        {
-                                            <div class="lesson-cell">
-                                                <b>@lesson.Subject?.Name</b><br />
-                                                <span>@lesson.Type</span><br />
-                                                <span>Ауд. @lesson.Room</span><br />
-                                                <small>@string.Join(", ", lesson.Lecturer.Select(l => $"{l.Surname} {l.Name}"))</small>
-                                            </div>
-                                        }
-                                    }
-                                </td>
-                            }
-                        </tr>
-                    }
-                </tbody>
-            </table>
-
-            <div class="upload-section">
-                <h4>Додай PDF з розкладом</h4>
-
-                <InputFile OnChange="@(async e => await HandleFileUploadAsync(e))" accept=".pdf" />
-
-                @if (!string.IsNullOrEmpty(uploadedFileName))
-                {
-                    <p>Завантажено: <b>@uploadedFileName</b></p>
                 }
-
-                <button class="parse-btn" @onclick="@(async () => await RunParserAsync())">Отримати розклад</button>
-            </div>
-        </div>
+            </tbody>
+        </table>
     </div>
 </div>
 
 @code {
-    private string? uploadedFilePath;
-    private string? uploadedFileName;
-
-    private Dictionary<string, Dictionary<string, List<Lesson>>> RenderedSchedule = new();
-
-    private readonly string[] Days =
+    private string[] timeSlots = new[]
     {
-        "Понеділок", "Вівторок", "Середа", "Четвер", "П’ятниця"
+        "08:30 - 09:50",
+        "10:10 - 11:30",
+        "11:50 - 13:10",
+        "13:30 - 14:50",
+        "15:05 - 16:25"
     };
 
-    private readonly string[] TimeSlots =
+    // Тестові дані - потім замінити на дані з бекенду
+    private List<ScheduleLesson> lessons = new List<ScheduleLesson>
     {
-        "8:30 - 9:50", "10:10 - 11:30", "11:50 - 13:10",
-        "13:30 - 14:50", "15:05 - 16:25", "16:40 - 18:00"
+        // Понеділок
+        new ScheduleLesson { Day = 0, Time = "08:30 - 09:50", Type = "Л", Subject = "Бази даних та Інформаційні системи", Room = "111", Lecturer = "С. В. Літинський" },
+        new ScheduleLesson { Day = 0, Time = "10:10 - 11:30", Type = "П", Subject = "Комп'ютерна інженерія", Room = "116", Lecturer = "Л. М. Клакович" },
+        new ScheduleLesson { Day = 0, Time = "13:30 - 14:50", Type = "С", Subject = "Програмування веб-застосунків", Room = "112", Lecturer = "О. В. Вовк" },
+        
+        // Вівторок
+        new ScheduleLesson { Day = 1, Time = "08:30 - 09:50", Type = "Л", Subject = "Бази даних та Інформаційні системи", Room = "111", Lecturer = "С. В. Літинський" },
+        new ScheduleLesson { Day = 1, Time = "10:10 - 11:30", Type = "П", Subject = "Комп'ютерна інженерія", Room = "116", Lecturer = "Л. М. Клакович" },
+        
+        // Середа
+        new ScheduleLesson { Day = 2, Time = "10:10 - 11:30", Type = "П", Subject = "Комп'ютерна інженерія", Room = "116", Lecturer = "Л. М. Клакович" },
+        new ScheduleLesson { Day = 2, Time = "11:50 - 13:10", Type = "Л", Subject = "Паралельні та розподілені обчислення", Room = "439", Lecturer = "Б. М. Гошко" },
+        new ScheduleLesson { Day = 2, Time = "13:30 - 14:50", Type = "С", Subject = "Програмування веб-застосунків", Room = "112", Lecturer = "О. В. Вовк" },
+        
+        // Четвер
+        new ScheduleLesson { Day = 3, Time = "08:30 - 09:50", Type = "Л", Subject = "Алгоритми та структури даних", Room = "203", Lecturer = "І. П. Костів" },
+        new ScheduleLesson { Day = 3, Time = "11:50 - 13:10", Type = "П", Subject = "Дискретна математика", Room = "315", Lecturer = "М. С. Федорчук" },
+        new ScheduleLesson { Day = 3, Time = "13:30 - 14:50", Type = "С", Subject = "Програмування веб-застосунків", Room = "112", Lecturer = "О. В. Вовк" },
+        
+        // П'ятниця
+        new ScheduleLesson { Day = 4, Time = "10:10 - 11:30", Type = "Л", Subject = "Теорія ймовірностей", Room = "221", Lecturer = "Н. В. Кузик" },
+        new ScheduleLesson { Day = 4, Time = "11:50 - 13:10", Type = "П", Subject = "Операційні системи", Room = "118", Lecturer = "Р. О. Шкраб" },
+        new ScheduleLesson { Day = 4, Time = "13:30 - 14:50", Type = "С", Subject = "Програмування веб-застосунків", Room = "112", Lecturer = "О. В. Вовк" },
     };
 
-    private async System.Threading.Tasks.Task HandleFileUploadAsync(InputFileChangeEventArgs e)
+    private ScheduleLesson? GetLesson(int day, string time)
     {
-        var file = e.File;
-        if (file == null)
-        {
-            await JS.InvokeVoidAsync("alert", "Файл не вибрано.");
-            return;
-        }
-
-        if (!file.Name.EndsWith(".pdf", StringComparison.OrdinalIgnoreCase))
-        {
-            await JS.InvokeVoidAsync("alert", "Будь ласка, виберіть PDF файл.");
-            return;
-        }
-
-        uploadedFileName = file.Name;
-        var folder = Path.Combine(AppContext.BaseDirectory, "Resources", "Schedules");
-        Directory.CreateDirectory(folder);
-
-        uploadedFilePath = Path.Combine(folder, uploadedFileName);
-        using var fs = new FileStream(uploadedFilePath, FileMode.Create);
-        await file.OpenReadStream().CopyToAsync(fs);
-
-        await JS.InvokeVoidAsync("alert", $"Файл {uploadedFileName} успішно завантажено!");
+        return lessons.FirstOrDefault(l => l.Day == day && l.Time == time);
     }
 
-    private async System.Threading.Tasks.Task RunParserAsync()
+    private void RefreshSchedule()
     {
-        if (uploadedFilePath is null)
-        {
-            await JS.InvokeVoidAsync("alert", "Будь ласка, додай PDF файл!");
-            return;
-        }
+        // TODO: Викликати парсер для оновлення розкладу з сайту
+        // await ScheduleService.ParseAndUpdateSchedule();
+    }
 
-        string groupName = Preferences.Get("GroupName", "ПМІ – 31с");
-
-        try
-        {
-            var schedule = await ScheduleService.ParseScheduleAsync(uploadedFilePath, groupName);
-            await JS.InvokeVoidAsync("alert", $"Розклад для {groupName} успішно отримано! ({schedule.Lessons.Count} занять)");
-
-            RenderedSchedule = schedule.Lessons
-                .GroupBy(l => l.Day)
-                .ToDictionary(
-                    g => g.Key,
-                    g => g.GroupBy(l => $"{l.LessonSlot.Start:HH:mm} - {l.LessonSlot.End:HH:mm}")
-                          .ToDictionary(sg => sg.Key, sg => sg.ToList())
-                );
-
-            StateHasChanged();
-        }
-        catch (Exception ex)
-        {
-            await JS.InvokeVoidAsync("alert", $"Помилка: {ex.Message}");
-        }
+    private class ScheduleLesson
+    {
+        public int Day { get; set; }
+        public string Time { get; set; } = "";
+        public string Type { get; set; } = "";
+        public string Subject { get; set; } = "";
+        public string Room { get; set; } = "";
+        public string Lecturer { get; set; } = "";
     }
 }

@@ -3,15 +3,13 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.14.36511.14
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StudyHub.Presentation", "StudyHub.Presentation\StudyHub.Presentation.csproj", "{B2E16453-1D57-4EAE-A7F6-A7B764340132}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StudyHub.DAL", "StudyHub.DAL\StudyHub.DAL.csproj", "{E1C32747-258E-4EAB-A391-8C0161CA95D8}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StudyHub.BLL", "StudyHub.BLL\StudyHub.BLL.csproj", "{AED1BA13-75E7-4DC1-A336-3D5AC22AFBBE}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StudyHub", "StudyHub\StudyHub.csproj", "{BF600EC3-5310-5654-C988-E6CEB473CBBE}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StudyHub.TestProject", " StudyHub.TestProject\StudyHub.TestProject.csproj", "{A35022E2-F4B5-46BF-A090-E0F2E31C733F}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StudyHub.TestProject", "StudyHub.TestProject\StudyHub.TestProject.csproj", "{A35022E2-F4B5-46BF-A090-E0F2E31C733F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -19,10 +17,6 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{B2E16453-1D57-4EAE-A7F6-A7B764340132}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{B2E16453-1D57-4EAE-A7F6-A7B764340132}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{B2E16453-1D57-4EAE-A7F6-A7B764340132}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{B2E16453-1D57-4EAE-A7F6-A7B764340132}.Release|Any CPU.Build.0 = Release|Any CPU
 		{E1C32747-258E-4EAB-A391-8C0161CA95D8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{E1C32747-258E-4EAB-A391-8C0161CA95D8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E1C32747-258E-4EAB-A391-8C0161CA95D8}.Release|Any CPU.ActiveCfg = Release|Any CPU
