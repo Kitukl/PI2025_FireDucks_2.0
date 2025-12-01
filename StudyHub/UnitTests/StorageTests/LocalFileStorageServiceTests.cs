@@ -23,21 +23,38 @@ public class LocalFileStorageServiceTests : IDisposable
         }
     }
 
+    // -------------------------
+    //       GET FOLDERS
+    // -------------------------
+
     [Fact]
     public async Task GetFoldersAsync_ReturnsFolders()
     {
-        string[] expectedFolders = new[] { "Folder1", "Folder2", "Folder3" };
+        string[] expectedFolders = { "Folder1", "Folder2", "Folder3" };
         foreach (var folder in expectedFolders)
         {
             Directory.CreateDirectory(Path.Combine(_tempRoot, folder));
         }
 
-        var actualFolders = await _service.GetFoldersAsync(_tempRoot);
+        // Pass RELATIVE path 
+        var actualFolders = await _service.GetFoldersAsync("");
 
         Assert.Equal(
             expectedFolders.OrderBy(x => x),
             actualFolders.OrderBy(x => x));
     }
+
+    [Fact]
+    public async Task GetFoldersAsync_ReturnsEmpty_WhenDirectoryDoesNotExist()
+    {
+        var folders = await _service.GetFoldersAsync("missing");
+
+        Assert.Empty(folders);
+    }
+
+    // -------------------------
+    //       GET FILES
+    // -------------------------
 
     [Fact]
     public async Task GetFilesAsync_ReturnsFiles()
@@ -54,6 +71,18 @@ public class LocalFileStorageServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task GetFilesAsync_ReturnsEmpty_WhenDirectoryMissing()
+    {
+        var files = await _service.GetFilesAsync("missing");
+
+        Assert.Empty(files);
+    }
+
+    // -------------------------
+    //     CREATE FOLDER
+    // -------------------------
+
+    [Fact]
     public async Task CreateFolderAsync_CreatesFolder()
     {
         string folderName = "TestFolder";
@@ -62,6 +91,10 @@ public class LocalFileStorageServiceTests : IDisposable
 
         Assert.True(Directory.Exists(Path.Combine(_tempRoot, folderName)));
     }
+
+    // -------------------------
+    //      DELETE FILE
+    // -------------------------
 
     [Fact]
     public async Task DeleteFileAsync_RemovesFile()
@@ -75,7 +108,20 @@ public class LocalFileStorageServiceTests : IDisposable
 
         Assert.False(File.Exists(fullPath));
     }
-    
+
+    [Fact]
+    public async Task DeleteFileAsync_DoesNothing_WhenFileMissing()
+    {
+        await _service.DeleteFileAsync("missing.txt");
+
+        // no exception means success
+        Assert.True(true);
+    }
+
+    // -------------------------
+    //      ADD FILE
+    // -------------------------
+
     [Fact]
     public async Task AddFileAsync_CreatesFileWithContent()
     {
@@ -90,5 +136,25 @@ public class LocalFileStorageServiceTests : IDisposable
 
         Assert.True(File.Exists(filePath));
         Assert.Equal("hello", File.ReadAllText(filePath));
+    }
+
+    // -------------------------
+    //      SECURITY TESTS
+    // -------------------------
+
+    [Fact]
+    public async Task Operations_Throw_WhenPathEscapesRoot()
+    {
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            _service.GetFilesAsync("../outside"));
+    }
+
+    [Fact]
+    public async Task AddFileAsync_Throws_WhenEscapingRoot()
+    {
+        using var s = new MemoryStream(new byte[] { 1 });
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(() =>
+            _service.AddFileAsync("../hack", s, "x.txt"));
     }
 }
