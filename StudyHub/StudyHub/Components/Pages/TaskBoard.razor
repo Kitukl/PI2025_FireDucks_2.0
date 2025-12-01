@@ -1,149 +1,160 @@
 ﻿@page "/taskboard"
 @using StudyHub.BLL.Models
 
-<div class="min-h-screen bg-gray-50 p-6">
-    <div class="max-w-7xl mx-auto">
-        <div class="mb-6 flex justify-between items-center">
-            <h1 class="text-3xl font-bold text-gray-800">Task Board</h1>
-
-            <div class="flex gap-4 items-center">
-
-                <a href="/"
-                   class="bg-gradient-to-r from-purple-500 to-pink-500 text-white px-4 py-2 rounded-lg font-semibold hover:shadow-lg transition-all">
-                    ← Home
-                </a>
-
-                <button @onclick="OpenCreateTaskModal"
-                        class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center gap-2">
-                    <span>+</span> Create Task
-                </button>
-            </div>
-        </div>
-
-        <div class="mb-6 flex gap-4">
+<div class="taskboard-container" @onclick="CloseFilterDropdown">
+    <div class="taskboard-header">
+        <div class="search-wrapper">
+            <span class="search-icon">🔍</span>
             <input type="text"
-                   placeholder="Search..."
+                   placeholder="Search"
                    @bind="searchQuery"
                    @bind:event="oninput"
-                   class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
-            <select @bind="filterSubject" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                <option value="">Filter By Subject</option>
-                <option value="Subject A">Subject A</option>
-                <option value="Subject B">Subject B</option>
-                <option value="Subject C">Subject C</option>
-            </select>
+                   class="taskboard-search" />
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200">
-                <div class="p-4 border-b border-gray-200">
-                    <h2 class="font-semibold text-lg text-gray-700">To Do</h2>
-                    <span class="text-sm text-gray-500">@GetTasksByStatus("To Do").Count() tasks</span>
-                </div>
-                <div class="p-4 space-y-3 min-h-[400px]">
-                    @foreach (var task in GetTasksByStatus("To Do"))
-                    {
-                        <div class="bg-gray-50 rounded-lg p-3 cursor-pointer hover:shadow-md transition border border-gray-200"
-                             @onclick="() => OpenTaskDetails(task)">
-                            <h3 class="font-semibold text-sm mb-1">@task.Name</h3>
-                            <p class="text-xs text-gray-600 mb-2">@task.Subject</p>
-                            <span class="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
-                                @task.Code
-                            </span>
-                        </div>
-                    }
-                </div>
-            </div>
+        <button class="filter-btn" @onclick="ToggleFilterDropdown" @onclick:stopPropagation="true">
+            <span class="filter-icon">☰</span>
+            Filter By
+        </button>
 
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200">
-                <div class="p-4 border-b border-gray-200">
-                    <h2 class="font-semibold text-lg text-yellow-700">In Progress</h2>
-                    <span class="text-sm text-gray-500">@GetTasksByStatus("In Progress").Count() tasks</span>
-                </div>
-                <div class="p-4 space-y-3 min-h-[400px]">
-                    @foreach (var task in GetTasksByStatus("In Progress"))
-                    {
-                        <div class="bg-yellow-50 rounded-lg p-3 cursor-pointer hover:shadow-md transition border border-yellow-200"
-                             @onclick="() => OpenTaskDetails(task)">
-                            <h3 class="font-semibold text-sm mb-1">@task.Name</h3>
-                            <p class="text-xs text-gray-600 mb-2">@task.Subject</p>
-                            <span class="inline-block bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">
-                                @task.Code
-                            </span>
-                        </div>
-                    }
-                </div>
-            </div>
+        <button class="create-task-btn" @onclick="OpenCreateTaskModal">
+            Create Task
+        </button>
+    </div>
 
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200">
-                <div class="p-4 border-b border-gray-200">
-                    <h2 class="font-semibold text-lg text-purple-700">For Review</h2>
-                    <span class="text-sm text-gray-500">@GetTasksByStatus("For Review").Count() tasks</span>
-                </div>
-                <div class="p-4 space-y-3 min-h-[400px]">
-                    @foreach (var task in GetTasksByStatus("For Review"))
-                    {
-                        <div class="bg-purple-50 rounded-lg p-3 cursor-pointer hover:shadow-md transition border border-purple-200"
-                             @onclick="() => OpenTaskDetails(task)">
-                            <h3 class="font-semibold text-sm mb-1">@task.Name</h3>
-                            <p class="text-xs text-gray-600 mb-2">@task.Subject</p>
-                            <span class="inline-block bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded">
-                                @task.Code
-                            </span>
-                        </div>
-                    }
-                </div>
-            </div>
+    @if (showFilterDropdown)
+    {
+        <div class="filter-dropdown" @onclick:stopPropagation="true">
+            <div class="filter-option" @onclick='() => SetFilter("")'>All Subjects</div>
+            <div class="filter-option" @onclick='() => SetFilter("Subject A")'>Subject A</div>
+            <div class="filter-option" @onclick='() => SetFilter("Subject B")'>Subject B</div>
+            <div class="filter-option" @onclick='() => SetFilter("Subject C")'>Subject C</div>
+        </div>
+    }
 
-            <div class="bg-white rounded-lg shadow-sm border border-gray-200">
-                <div class="p-4 border-b border-gray-200">
-                    <h2 class="font-semibold text-lg text-green-700">Done</h2>
-                    <span class="text-sm text-gray-500">@GetTasksByStatus("Done").Count() tasks</span>
-                </div>
-                <div class="p-4 space-y-3 min-h-[400px]">
-                    @foreach (var task in GetTasksByStatus("Done"))
-                    {
-                        <div class="bg-green-50 rounded-lg p-3 cursor-pointer hover:shadow-md transition border border-green-200"
-                             @onclick="() => OpenTaskDetails(task)">
-                            <h3 class="font-semibold text-sm mb-1">@task.Name</h3>
-                            <p class="text-xs text-gray-600 mb-2">@task.Subject</p>
-                            <span class="inline-block bg-green-100 text-green-800 text-xs px-2 py-1 rounded">
-                                @task.Code
-                            </span>
+    <div class="kanban-board">
+        <div class="kanban-column">
+            <div class="column-header">
+                <h3>To Do</h3>
+                <span class="task-count">↑↓</span>
+            </div>
+            <div class="column-content">
+                @foreach (var task in GetTasksByStatus("To Do"))
+                {
+                    <div class="task-card" @onclick="() => OpenTaskDetails(task)">
+                        <div class="task-card-header">
+                            <h4>@task.Name</h4>
+                            <span class="task-status-icon" style="@GetStatusIconColor(task)">@GetStatusIcon(task)</span>
                         </div>
-                    }
-                </div>
+                        <p class="task-subject">@task.Subject</p>
+                        <div class="task-card-footer">
+                            <span class="task-code">@task.Code</span>
+                            <span class="task-avatar">👤</span>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="kanban-column">
+            <div class="column-header">
+                <h3>In Progress</h3>
+                <span class="task-count">↑↓</span>
+            </div>
+            <div class="column-content">
+                @foreach (var task in GetTasksByStatus("In Progress"))
+                {
+                    <div class="task-card" @onclick="() => OpenTaskDetails(task)">
+                        <div class="task-card-header">
+                            <h4>@task.Name</h4>
+                            <span class="task-status-icon" style="@GetStatusIconColor(task)">@GetStatusIcon(task)</span>
+                        </div>
+                        <p class="task-subject">@task.Subject</p>
+                        <div class="task-card-footer">
+                            <span class="task-code">@task.Code</span>
+                            <span class="task-avatar">👤</span>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="kanban-column">
+            <div class="column-header">
+                <h3>For Review</h3>
+                <span class="task-count">↑↓</span>
+            </div>
+            <div class="column-content">
+                @foreach (var task in GetTasksByStatus("For Review"))
+                {
+                    <div class="task-card" @onclick="() => OpenTaskDetails(task)">
+                        <div class="task-card-header">
+                            <h4>@task.Name</h4>
+                            <span class="task-status-icon" style="@GetStatusIconColor(task)">@GetStatusIcon(task)</span>
+                        </div>
+                        <p class="task-subject">@task.Subject</p>
+                        <div class="task-card-footer">
+                            <span class="task-code">@task.Code</span>
+                            <span class="task-avatar">👤</span>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="kanban-column">
+            <div class="column-header">
+                <h3>Done</h3>
+                <span class="task-count">↑↓</span>
+            </div>
+            <div class="column-content">
+                @foreach (var task in GetTasksByStatus("Done"))
+                {
+                    <div class="task-card task-card-done" @onclick="() => OpenTaskDetails(task)">
+                        <div class="task-card-header">
+                            <h4>@task.Name</h4>
+                            <span class="task-status-icon" style="@GetStatusIconColor(task)">@GetStatusIcon(task)</span>
+                        </div>
+                        <p class="task-subject">@task.Subject</p>
+                        <div class="task-card-footer">
+                            <span class="task-code">@task.Code</span>
+                            <span class="task-avatar">👤</span>
+                        </div>
+                    </div>
+                }
             </div>
         </div>
     </div>
 
     @if (showCreateModal)
     {
-        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-             @onclick="CloseCreateTaskModal">
-            <div class="bg-white rounded-lg p-6 w-full max-w-lg m-4" @onclick:stopPropagation>
-                <h2 class="text-2xl font-bold mb-4">Create Task</h2>
+        <div class="modal-overlay" @onclick="CloseCreateTaskModal">
+            <div class="modal-content" @onclick:stopPropagation>
+                <div class="modal-header">
+                    <h2>Create Task</h2>
+                    <button class="modal-close" @onclick="CloseCreateTaskModal">×</button>
+                </div>
 
-                <div class="space-y-4">
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Task Name</label>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Task Name</label>
                         <input @bind="newTaskName"
                                placeholder="Name your task..."
-                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                               class="form-input" />
                     </div>
 
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Description</label>
+                    <div class="form-group">
+                        <label>Description</label>
                         <textarea @bind="newTaskDescription"
                                   placeholder="Please describe what needs to be done..."
                                   rows="4"
-                                  class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+                                  class="form-textarea"></textarea>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Subject</label>
-                            <select @bind="newTaskSubject" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Subject</label>
+                            <select @bind="newTaskSubject" class="form-select">
                                 <option value="">Choose subject</option>
                                 <option value="Subject A">Subject A</option>
                                 <option value="Subject B">Subject B</option>
@@ -151,32 +162,24 @@
                             </select>
                         </div>
 
-                        <div>
-                            <label class="block text-sm font-medium mb-1">Due Date</label>
-                            <input type="date" @bind="newTaskDueDate"
-                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                        <div class="form-group">
+                            <label>Due Date</label>
+                            <input type="date" @bind="newTaskDueDate" class="form-input" />
                         </div>
                     </div>
 
-                    <div>
-                        <label class="block text-sm font-medium mb-1">Reminder</label>
-                        <div class="flex items-center gap-2">
-                            <input type="number" @bind="newTaskReminderDays"
-                                   class="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" />
-                            <span class="text-sm">days before due date</span>
+                    <div class="form-group">
+                        <label>Reminder</label>
+                        <div class="reminder-input">
+                            <input type="number" @bind="newTaskReminderDays" class="form-input-small" />
+                            <span>days before due date</span>
                         </div>
                     </div>
                 </div>
 
-                <div class="mt-6 flex gap-3 justify-end">
-                    <button @onclick="CloseCreateTaskModal"
-                            class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">
-                        Cancel
-                    </button>
-                    <button @onclick="CreateNewTask"
-                            class="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg">
-                        Create
-                    </button>
+                <div class="modal-footer">
+                    <button @onclick="CloseCreateTaskModal" class="btn-secondary">Cancel</button>
+                    <button @onclick="CreateNewTask" class="btn-primary">Create</button>
                 </div>
             </div>
         </div>
@@ -184,67 +187,101 @@
 
     @if (selectedTask != null)
     {
-        <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
-             @onclick="CloseTaskDetails">
-            <div class="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto m-4"
-                 @onclick:stopPropagation>
-
-                <div class="flex justify-between items-start mb-6">
+        <div class="modal-overlay" @onclick="CloseTaskDetails">
+            <div class="modal-content modal-content-large" @onclick:stopPropagation>
+                <div class="modal-header">
                     <div>
-                        <h2 class="text-2xl font-bold">@selectedTask.Name</h2>
-                        <p class="text-sm text-gray-600">@selectedTask.Code</p>
+                        <h2>@selectedTask.Name</h2>
+                        <p class="task-code-detail">@selectedTask.Code</p>
                     </div>
-                    <button @onclick="CloseTaskDetails" class="text-gray-400 hover:text-gray-600 text-2xl">×</button>
+                    <button class="modal-close" @onclick="CloseTaskDetails">×</button>
                 </div>
 
-                <div class="grid grid-cols-2 gap-4 mb-6">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-600">Subject</label>
-                        <p class="text-base mt-1">@selectedTask.Subject</p>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Task Name</label>
+                        @if (isEditMode)
+                        {
+                            <input type="text" @bind="editTaskName" class="form-input" placeholder="Enter task name" />
+                        }
+                        else
+                        {
+                            <p class="form-value">@selectedTask.Name</p>
+                        }
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-600">Status</label>
-                        <select @bind="selectedTaskStatus" class="w-full mt-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
-                            <option value="To Do">To Do</option>
-                            <option value="In Progress">In Progress</option>
-                            <option value="For Review">For Review</option>
-                            <option value="Done">Done</option>
-                        </select>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Subject</label>
+                            @if (isEditMode)
+                            {
+                                <select @bind="editTaskSubject" class="form-select">
+                                    <option value="Subject A">Subject A</option>
+                                    <option value="Subject B">Subject B</option>
+                                    <option value="Subject C">Subject C</option>
+                                </select>
+                            }
+                            else
+                            {
+                                <p class="form-value">@selectedTask.Subject</p>
+                            }
+                        </div>
+                        <div class="form-group">
+                            <label>Status</label>
+                            <select @bind="selectedTaskStatus" class="form-select">
+                                <option value="To Do">To Do</option>
+                                <option value="In Progress">In Progress</option>
+                                <option value="For Review">For Review</option>
+                                <option value="Done">Done</option>
+                            </select>
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-600">Due Date</label>
-                        <p class="text-base mt-1">@(selectedTask.DueDate?.ToString("dd/MM/yyyy") ?? "Not set")</p>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Due Date</label>
+                            @if (isEditMode)
+                            {
+                                <input type="date" @bind="editTaskDueDate" class="form-input" />
+                            }
+                            else
+                            {
+                                <p class="form-value">@(selectedTask.DueDate?.ToString("dd/MM/yyyy") ?? "Not set")</p>
+                            }
+                        </div>
+                        <div class="form-group">
+                            <label>Creation Date</label>
+                            <p class="form-value">@selectedTask.CreationDate.ToString("dd/MM/yyyy")</p>
+                        </div>
                     </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-600">Creation Date</label>
-                        <p class="text-base mt-1">@selectedTask.CreationDate.ToString("dd/MM/yyyy")</p>
+
+                    <div class="form-group">
+                        <label>Description</label>
+                        @if (isEditMode)
+                        {
+                            <textarea @bind="editTaskDescription" rows="4" class="form-textarea" placeholder="Enter description"></textarea>
+                        }
+                        else
+                        {
+                            <div class="description-box">
+                                <p>@selectedTask.Description</p>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="form-group">
+                        <label>Notes</label>
+                        <textarea placeholder="Add notes..." rows="3" class="form-textarea" @bind="taskNotes"></textarea>
+                        <button class="btn-primary" style="margin-top: 10px;" @onclick="SaveTaskNotes">Save Comment</button>
                     </div>
                 </div>
 
-                <div class="mb-6">
-                    <label class="block text-sm font-medium text-gray-600 mb-2">Description</label>
-                    <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                        <p class="text-sm">@selectedTask.Description</p>
+                <div class="modal-footer">
+                    <button @onclick="DeleteTask" class="btn-delete">Delete</button>
+                    <div class="modal-footer-right">
+                        <button @onclick="ToggleEditMode" class="btn-secondary">@(isEditMode ? "Cancel" : "Edit")</button>
+                        <button @onclick="SaveTaskChanges" class="btn-primary">@(isEditMode ? "Save Changes" : "Done")</button>
                     </div>
-                </div>
-
-                <div class="mb-6">
-                    <label class="block text-sm font-medium text-gray-600 mb-2">Notes and Attachments</label>
-                    <textarea placeholder="Add notes..."
-                          rows="3"
-                          class="w-full px-3 py-2 border border-gray-300 rounded-lg mb-2 focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
-                    <button class="text-sm text-blue-600 hover:text-blue-700">+ Add Files</button>
-                </div>
-
-                <div class="flex gap-3 justify-end">
-                    <button @onclick="CloseTaskDetails"
-                            class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">
-                        Back to the board
-                    </button>
-                    <button @onclick="SaveTaskChanges"
-                            class="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg">
-                        Done
-                    </button>
                 </div>
             </div>
         </div>
@@ -256,10 +293,16 @@
     private string searchQuery = "";
     private string filterSubject = "";
     private bool showCreateModal = false;
+    private bool showFilterDropdown = false;
     private TaskItem? selectedTask = null;
     private string selectedTaskStatus = "";
+    private string taskNotes = "";
+    private bool isEditMode = false;
+    private string editTaskName = "";
+    private string editTaskDescription = "";
+    private string editTaskSubject = "";
+    private DateTime? editTaskDueDate;
 
-    // Create task fields
     private string newTaskName = "";
     private string newTaskDescription = "";
     private string newTaskSubject = "";
@@ -273,16 +316,15 @@
 
     private void LoadTasks()
     {
-        // Тестові дані - замінити на завантаження з бази даних
         tasks = new List<TaskItem>
         {
-            new TaskItem { Id = 1, Name = "New Task#1", Subject = "Subject A", Code = "A-1", Status = "To Do", Description = "Complete the first assignment", DueDate = DateTime.Now.AddDays(7) },
-            new TaskItem { Id = 2, Name = "New Task#2", Subject = "Subject B", Code = "B-1", Status = "In Progress", Description = "Work on project B", DueDate = DateTime.Now.AddDays(5) },
-            new TaskItem { Id = 3, Name = "New Task#3", Subject = "Subject C", Code = "C-1", Status = "To Do", Description = "Study for exam", DueDate = DateTime.Now.AddDays(10) },
-            new TaskItem { Id = 4, Name = "New Task#4", Subject = "Subject B", Code = "B-2", Status = "For Review", Description = "Submit report for review", DueDate = DateTime.Now.AddDays(3) },
-            new TaskItem { Id = 5, Name = "New Task#5", Subject = "Subject A", Code = "A-2", Status = "Done", Description = "Create presentation", DueDate = DateTime.Now.AddDays(-2) },
-            new TaskItem { Id = 6, Name = "New Task#6", Subject = "Subject C", Code = "C-2", Status = "In Progress", Description = "Lab work completion", DueDate = DateTime.Now.AddDays(4) },
-            new TaskItem { Id = 7, Name = "New Task#7", Subject = "Subject A", Code = "A-3", Status = "To Do", Description = "Read chapters 5-7", DueDate = DateTime.Now.AddDays(6) },
+            new TaskItem { Id = 1, Name = "New Task#1", Subject = "Subject A", Code = "A-1", Status = "To Do", Description = "Complete the first assignment", DueDate = DateTime.Now.AddDays(7), CreationDate = DateTime.Now.AddDays(-3) },
+            new TaskItem { Id = 2, Name = "New Task#2", Subject = "Subject B", Code = "B-1", Status = "In Progress", Description = "Work on project B", DueDate = DateTime.Now.AddDays(5), CreationDate = DateTime.Now.AddDays(-5) },
+            new TaskItem { Id = 3, Name = "New Task#3", Subject = "Subject C", Code = "C-1", Status = "In Progress", Description = "Study for exam", DueDate = DateTime.Now.AddDays(10), CreationDate = DateTime.Now.AddDays(-2) },
+            new TaskItem { Id = 4, Name = "New Task#4", Subject = "Subject B", Code = "B-2", Status = "In Progress", Description = "Submit report for review", DueDate = DateTime.Now.AddDays(3), CreationDate = DateTime.Now.AddDays(-4) },
+            new TaskItem { Id = 5, Name = "New Task#5", Subject = "Subject A", Code = "A-2", Status = "Done", Description = "Create presentation", DueDate = DateTime.Now.AddDays(-2), CreationDate = DateTime.Now.AddDays(-10) },
+            new TaskItem { Id = 6, Name = "New Task#6", Subject = "Subject C", Code = "C-2", Status = "For Review", Description = "Lab work completion", DueDate = DateTime.Now.AddDays(4), CreationDate = DateTime.Now.AddDays(-6) },
+            new TaskItem { Id = 7, Name = "New Task#7", Subject = "Subject A", Code = "A-3", Status = "For Review", Description = "Read chapters 5-7", DueDate = DateTime.Now.AddDays(6), CreationDate = DateTime.Now.AddDays(-1) },
         };
     }
 
@@ -291,6 +333,22 @@
         return tasks.Where(t => t.Status == status &&
                                (string.IsNullOrEmpty(searchQuery) || t.Name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)) &&
                                (string.IsNullOrEmpty(filterSubject) || t.Subject == filterSubject));
+    }
+
+    private void ToggleFilterDropdown()
+    {
+        showFilterDropdown = !showFilterDropdown;
+    }
+
+    private void CloseFilterDropdown()
+    {
+        showFilterDropdown = false;
+    }
+
+    private void SetFilter(string subject)
+    {
+        filterSubject = subject;
+        showFilterDropdown = false;
     }
 
     private void OpenCreateTaskModal()
@@ -318,11 +376,19 @@
     {
         selectedTask = task;
         selectedTaskStatus = task.Status;
+        taskNotes = "";
+        isEditMode = false;
+        editTaskName = task.Name;
+        editTaskDescription = task.Description;
+        editTaskSubject = task.Subject;
+        editTaskDueDate = task.DueDate;
     }
 
     private void CloseTaskDetails()
     {
         selectedTask = null;
+        taskNotes = "";
+        isEditMode = false;
     }
 
     private void CreateNewTask()
@@ -350,13 +416,132 @@
         CloseCreateTaskModal();
     }
 
+    private void ToggleEditMode()
+    {
+        isEditMode = !isEditMode;
+        if (!isEditMode && selectedTask != null)
+        {
+            // Скасування змін - повернення до оригінальних значень
+            editTaskName = selectedTask.Name;
+            editTaskDescription = selectedTask.Description;
+            editTaskSubject = selectedTask.Subject;
+            editTaskDueDate = selectedTask.DueDate;
+        }
+    }
+
     private void SaveTaskChanges()
     {
         if (selectedTask != null)
         {
             selectedTask.Status = selectedTaskStatus;
-            // TODO: Зберегти зміни в базі даних
+            
+            if (isEditMode)
+            {
+                selectedTask.Name = editTaskName;
+                selectedTask.Description = editTaskDescription;
+                selectedTask.Subject = editTaskSubject;
+                selectedTask.DueDate = editTaskDueDate;
+                isEditMode = false;
+            }
         }
         CloseTaskDetails();
+    }
+
+    private void SaveTaskNotes()
+    {
+        if (!string.IsNullOrWhiteSpace(taskNotes))
+        {
+            // Тут можна додати логіку збереження коментаря в базу даних
+            // Наразі просто очищаємо поле після "збереження"
+            taskNotes = "";
+        }
+    }
+
+    private void DeleteTask()
+    {
+        if (selectedTask != null)
+        {
+            tasks.Remove(selectedTask);
+            CloseTaskDetails();
+        }
+    }
+
+    private string GetStatusIcon(TaskItem task)
+    {
+        if (task.Status == "Done")
+        {
+            // Якщо Done і дедлайн пропущений - червоний хрестик
+            if (task.DueDate.HasValue && task.DueDate.Value.Date < DateTime.Now.Date)
+            {
+                return "✖";
+            }
+            // Якщо Done до дедлайну - галочка
+            return "✓";
+        }
+
+        if (!task.DueDate.HasValue)
+        {
+            return "⚫"; // Заповнений кружок якщо немає дедлайну
+        }
+
+        var daysUntilDue = (task.DueDate.Value.Date - DateTime.Now.Date).Days;
+
+        if (daysUntilDue < 0)
+        {
+            // Пропущений дедлайн
+            return "✖";
+        }
+        else if (daysUntilDue <= 1)
+        {
+            // 1 день або сьогодні
+            return "!!";
+        }
+        else if (daysUntilDue <= 3)
+        {
+            // 2-3 дні
+            return "!";
+        }
+        else if (daysUntilDue <= 7)
+        {
+            // 4-7 днів
+            return "○";
+        }
+        else
+        {
+            // 8+ днів
+            return "⚫";
+        }
+    }
+
+    private string GetStatusIconColor(TaskItem task)
+    {
+        if (task.Status == "Done")
+        {
+            // Якщо Done і дедлайн пропущений - червоний
+            if (task.DueDate.HasValue && task.DueDate.Value.Date < DateTime.Now.Date)
+            {
+                return "color: #dc3545;";
+            }
+            // Якщо Done до дедлайну - зелений
+            return "color: #28a745;";
+        }
+
+        if (!task.DueDate.HasValue)
+        {
+            return "color: var(--color-text-primary);";
+        }
+
+        var daysUntilDue = (task.DueDate.Value.Date - DateTime.Now.Date).Days;
+
+        if (daysUntilDue < 0 || daysUntilDue <= 3)
+        {
+            // Пропущений дедлайн або критично близько (1-3 дні)
+            return "color: #dc3545;";
+        }
+        else
+        {
+            // Все інше - звичайний колір
+            return "color: var(--color-text-primary);";
+        }
     }
 }

@@ -1,13 +1,67 @@
 ﻿@inherits LayoutComponentBase
+@inject NavigationManager Navigation
 
-<div class="page">
-    <main>
-        @* <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
-        </div> *@
-
-        <article class="content px-4">
+@if (IsLoginPage())
+{
+    @Body
+}
+else
+{
+    <div class="app-container">
+        <aside class="sidebar-compact">
+            <nav class="sidebar-nav">
+                <a href="/home" class="sidebar-icon-btn @GetActiveClass("/home") @GetDisabledClass()">
+                    <span class="icon">🏠</span>
+                </a>
+                <a href="/schedule" class="sidebar-icon-btn @GetActiveClass("/schedule") @GetDisabledClass()">
+                    <span class="icon">📅</span>
+                </a>
+                <a href="/taskboard" class="sidebar-icon-btn @GetActiveClass("/taskboard") @GetDisabledClass()">
+                    <span class="icon">📋</span>
+                </a>
+                <a href="/storage" class="sidebar-icon-btn @GetActiveClass("/storage") @GetDisabledClass()">
+                    <span class="icon">📁</span>
+                </a>
+            </nav>
+            
+            <div class="sidebar-bottom">
+                <a href="/profile" class="sidebar-icon-btn @GetActiveClass("/profile") @GetDisabledClass()">
+                    <span class="icon">👤</span>
+                </a>
+            </div>
+        </aside>
+        
+        <main class="main-content">
             @Body
-        </article>
-    </main>
-</div>
+        </main>
+    </div>
+}
+
+@code {
+    private bool IsAuthenticated => !IsLoginPage();
+
+    private bool IsLoginPage()
+    {
+        var currentPath = Navigation.ToBaseRelativePath(Navigation.Uri);
+        return string.IsNullOrEmpty(currentPath) || 
+               currentPath.Equals("login", StringComparison.OrdinalIgnoreCase) ||
+               currentPath.Equals("register", StringComparison.OrdinalIgnoreCase) ||
+               currentPath.Equals("finish-registration", StringComparison.OrdinalIgnoreCase) ||
+               currentPath.Equals("forgot-password", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private string GetActiveClass(string path)
+    {
+        var currentPath = Navigation.ToBaseRelativePath(Navigation.Uri);
+        if (string.IsNullOrEmpty(currentPath) && path == "/")
+            return "active";
+        return currentPath.StartsWith(path.TrimStart('/'), StringComparison.OrdinalIgnoreCase) && path != "/" 
+            ? "active" 
+            : "";
+    }
+
+    private string GetDisabledClass()
+    {
+        return IsAuthenticated ? "" : "disabled";
+    }
+}
