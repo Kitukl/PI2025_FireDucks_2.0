@@ -17,20 +17,6 @@
 
 <div class="schedule-container">
     <div class="schedule-header">
-        <div class="schedule-header-left">
-            <select class="week-select">
-                <option value="current">Цей тиждень</option>
-                <option value="next">Наступний тиждень</option>
-            </select>
-
-            <select class="group-select">
-                <option value="ПМІ-31с">ПМІ-31с</option>
-                <option value="ПМІ-32с">ПМІ-32с</option>
-                <option value="ПМІ-33с">ПМІ-33с</option>
-                <option value="ПМІ-34с">ПМІ-34с</option>
-            </select>
-        </div>
-
         @if (isLoading)
         {
             <div class="loading-spinner">Оновлення...</div>
@@ -76,12 +62,12 @@
                                 <td class="lesson-cell">
                                     @if (RenderedSchedule.ContainsKey(day) && RenderedSchedule[day].ContainsKey(slotKey))
                                     {
-                                        foreach (var lesson in RenderedSchedule[day][slotKey])
+                                        foreach (var lesson in GetUniqueLessons(RenderedSchedule[day][slotKey]))
                                         {
                                             var typeClass = GetTypeClass(lesson.Type);
 
                                             <div class="lesson-card @typeClass">
-                                                <div class="lesson-type">@lesson.Type</div>
+                                                <div class="lesson-type">@GetTypeShortLabel(lesson.Type)</div>
                                                 <div class="lesson-subject">@(lesson.Subject?.Name ?? "Без назви")</div>
 
                                                 <div class="lesson-footer">
@@ -175,14 +161,51 @@
 
     private string GetTypeClass(string type)
     {
-        if (string.IsNullOrEmpty(type)) return "";
+        if (string.IsNullOrEmpty(type) || type.Trim() == "-") 
+            return "lesson-type-unknown";
 
         type = type.ToLower();
         if (type.Contains("лек")) return "lesson-type-l";
         if (type.Contains("прак") || type.Contains("лаб")) return "lesson-type-p";
         if (type.Contains("сем")) return "lesson-type-s";
 
-        return "";
+        return "lesson-type-unknown";
+    }
+
+    private string GetTypeShortLabel(string type)
+    {
+        if (string.IsNullOrEmpty(type)) return "";
+
+        type = type.ToLower();
+        if (type.Contains("лек")) return "Л";
+        if (type.Contains("прак") || type.Contains("лаб")) return "П";
+        if (type.Contains("сем")) return "С";
+
+        return type;
+    }
+
+    private List<Lesson> GetUniqueLessons(List<Lesson> lessons)
+    {
+        if (lessons == null || !lessons.Any())
+            return new List<Lesson>();
+
+        var uniqueLessons = new List<Lesson>();
+        
+        foreach (var lesson in lessons)
+        {
+            bool isDuplicate = uniqueLessons.Any(ul =>
+                ul.Subject?.Name == lesson.Subject?.Name &&
+                ul.Type == lesson.Type &&
+                ul.Room == lesson.Room &&
+                ul.Day == lesson.Day);
+
+            if (!isDuplicate)
+            {
+                uniqueLessons.Add(lesson);
+            }
+        }
+
+        return uniqueLessons;
     }
 
 

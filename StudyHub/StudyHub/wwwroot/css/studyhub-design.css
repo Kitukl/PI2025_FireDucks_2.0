@@ -1809,6 +1809,10 @@ h4 {
     background-color: #fff3e0;
 }
 
+.lesson-card.lesson-type-unknown {
+    background-color: #c8e6c9;
+}
+
 .lesson-type {
     display: inline-block;
     padding: 2px 8px;
