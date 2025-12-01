@@ -65,7 +65,7 @@ public class ScheduleRepository : IBaseRepository<Schedule>
 
         if (schedule == null)
         {
-            throw new Exception($"Schedule with id {id} not found");
+            throw new ArgumentException($"Schedule with id {id} not found");
         }
 
         return schedule;

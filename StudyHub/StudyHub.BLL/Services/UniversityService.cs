@@ -20,7 +20,7 @@ public class UniversityService
 
         if (faculty == null)
         {
-            throw new Exception($"Не знайдено факультет для групи {groupName}. Перевірте правильність назви.");
+            throw new ArgumentException($"Не знайдено факультет для групи {groupName}. Перевірте правильність назви.");
         }
 
         return faculty;
