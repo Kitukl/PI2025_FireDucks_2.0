@@ -1,4 +1,5 @@
-﻿using StudyHub.BLL.Models;
+﻿using StudyHub.BLL.Interfaces;
+using StudyHub.BLL.Models;
 using StudyHub.DAL.Entities;
 using StudyHub.DAL.Repositories;
 using System.Diagnostics;
@@ -15,17 +16,20 @@ namespace StudyHub.BLL.Services
         private readonly IBaseRepository<Subject> _subjectRepo;
         private readonly IBaseRepository<LessonSlots> _lessonSlotsRepo;
         private readonly IBaseRepository<Schedule> _scheduleRepo;
+        private readonly IParserRunner _parserRunner;
 
         public ScheduleService(
             IBaseRepository<Lecturer> lecturerRepo,
             IBaseRepository<Subject> subjectRepo,
             IBaseRepository<LessonSlots> lessonSlotsRepo,
-            IBaseRepository<Schedule> scheduleRepo)
+            IBaseRepository<Schedule> scheduleRepo,
+            IParserRunner parserRunner)
         {
             _lecturerRepo = lecturerRepo;
             _subjectRepo = subjectRepo;
             _lessonSlotsRepo = lessonSlotsRepo;
             _scheduleRepo = scheduleRepo;
+            _parserRunner = parserRunner;
 
             parserPath = Path.Combine(AppContext.BaseDirectory, "Parsers", "schedule_parser.exe");
             scheduleFolder = Path.Combine(AppContext.BaseDirectory, "Resources", "Schedules");
@@ -68,26 +72,7 @@ namespace StudyHub.BLL.Services
 
         private async Task<Dictionary<string, Dictionary<string, Dictionary<string, List<LessonEntry>>>>> RunExternalParserAsync(string pdfPath)
         {
-            var psi = new ProcessStartInfo
-            {
-                FileName = parserPath,
-                Arguments = $"\"{pdfPath}\"",
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                CreateNoWindow = true
-            };
-
-            using var process = Process.Start(psi);
-            string output = await process.StandardOutput.ReadToEndAsync();
-            string error = await process.StandardError.ReadToEndAsync();
-            process.WaitForExit();
-
-            if (!string.IsNullOrWhiteSpace(error))
-                throw new InvalidOperationException($"Помилка виконання парсера: {error}");
-
-            if (string.IsNullOrWhiteSpace(output))
-                throw new InvalidDataException("Парсер не повернув JSON!");
+            string output = await _parserRunner.RunParserAsync(pdfPath);
 
             var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
             var data = JsonSerializer.Deserialize<Dictionary<string, Dictionary<string, Dictionary<string, List<LessonEntry>>>>>(output, options);
