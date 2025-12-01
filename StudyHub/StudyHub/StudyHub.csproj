@@ -73,8 +73,15 @@
         <PackageReference Include="Microsoft.Maui.Controls" Version="$(MauiVersion)" />
         <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" Version="$(MauiVersion)" />
         <PackageReference Include="Microsoft.Extensions.Logging.Debug" Version="9.0.8" />
+        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
     </ItemGroup>
 
+	<ItemGroup>
+		<Content Include="..\StudyHub.BLL\Parsers\schedule_parser.exe">
+			<Link>Parsers\schedule_parser.exe</Link>
+			<CopyToOutputDirectory>CopyIfNewer</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
 
 	<ItemGroup>
       <ProjectReference Include="..\StudyHub.BLL\StudyHub.BLL.csproj" />

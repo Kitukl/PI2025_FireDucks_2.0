@@ -9,6 +9,7 @@ public class LessonSlotsConfiguration : IEntityTypeConfiguration<LessonSlots>
     public void Configure(EntityTypeBuilder<LessonSlots> builder)
     {
         builder.HasKey(ls => ls.Id);
+        builder.HasIndex(ls => new { ls.Start, ls.End }).IsUnique();
         builder.HasMany(ls => ls.Lessons).WithOne(l => l.LessonSlot);
     }
 }

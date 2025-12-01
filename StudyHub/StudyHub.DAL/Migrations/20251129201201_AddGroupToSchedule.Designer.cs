@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using StudyHub.DAL;
@@ -11,9 +12,11 @@ using StudyHub.DAL;
 namespace StudyHub.DAL.Migrations
 {
     [DbContext(typeof(StudyContext))]
-    partial class StudyContextModelSnapshot : ModelSnapshot
+    [Migration("20251129201201_AddGroupToSchedule")]
+    partial class AddGroupToSchedule
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
