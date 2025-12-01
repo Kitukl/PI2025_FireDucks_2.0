@@ -23,11 +23,18 @@
                 <option value="next">Наступний тиждень</option>
             </select>
 
-            <select class="group-select">
-                <option value="ПМІ-31с">ПМІ-31с</option>
-                <option value="ПМІ-32с">ПМІ-32с</option>
-                <option value="ПМІ-33с">ПМІ-33с</option>
-                <option value="ПМІ-34с">ПМІ-34с</option>
+            <select class="group-select" value="@currentGroupName" @onchange="OnGroupChanged">
+                @if (AvailableGroups == null || !AvailableGroups.Any())
+                {
+                    <option disabled>Немає груп</option>
+                }
+                else
+                {
+                    @foreach (var group in AvailableGroups)
+                    {
+                        <option value="@group">@group</option>
+                    }
+                }
             </select>
         </div>
 
@@ -112,10 +119,31 @@
     private bool HasScheduleData => RenderedSchedule.Count > 0;
     private string currentGroupName = "Невідома група";
 
-    // Дані для відображення
     private Dictionary<string, Dictionary<string, List<Lesson>>> RenderedSchedule = new();
     private List<string> Days = new();
     private List<LessonSlots> TimeSlots = new();
+
+    private List<string> AvailableGroups = new();
+
+
+    private async System.Threading.Tasks.Task OnGroupChanged(ChangeEventArgs e)
+    {
+        var newGroup = e.Value?.ToString();
+
+        if (!string.IsNullOrEmpty(newGroup) && newGroup != currentGroupName)
+        {
+            currentGroupName = newGroup;
+
+            Preferences.Set("GroupName", currentGroupName);
+
+            isLoading = true;
+
+            await LoadScheduleFromDb();
+
+            isLoading = false;
+        }
+    }
+
 
     protected override async System.Threading.Tasks.Task OnInitializedAsync()
     {
@@ -127,7 +155,16 @@
             var slotsFromDb = await SlotsRepo.GetAll();
             TimeSlots = slotsFromDb.OrderBy(s => s.Start).ToList();
 
-            currentGroupName = Preferences.Get("GroupName", "ПМІ-31с");
+            var allSchedules = await ScheduleRepo.GetAll();
+
+            AvailableGroups = allSchedules
+                .Select(s => s.GroupName)
+                .Where(n => !string.IsNullOrWhiteSpace(n))
+                .Distinct()
+                .OrderBy(n => n)
+                .ToList();
+
+            currentGroupName = Preferences.Get("GroupName", AvailableGroups.FirstOrDefault() ?? "ПМІ-31с");
 
             if (!string.IsNullOrEmpty(currentGroupName))
             {
