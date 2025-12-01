@@ -31,7 +31,7 @@ namespace StudyHub
 
             builder.Services.AddScoped<ScheduleService>();
 
-            builder.Services.AddScoped<IFacultyHelper, AMIFacultyHelper>();
+            builder.Services.AddScoped<IFacultyHelper, AmiFacultyHelper>();
 
             builder.Services.AddScoped<UniversityService>();
 

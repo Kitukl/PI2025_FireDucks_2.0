@@ -10,13 +10,13 @@ namespace StudyHub.DAL.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-
+            // Method intentionally left empty as no changes were detected by EF Core.
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
-
+            // Method intentionally left empty as no changes were detected by EF Core.
         }
     }
 }

@@ -14,6 +14,7 @@
         <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       </PackageReference>
+      <PackageReference Include="Microsoft.Playwright" Version="1.56.0" />
       <PackageReference Include="StyleCop.Analyzers" Version="1.2.0-beta.556">
         <PrivateAssets>all</PrivateAssets>
         <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -27,5 +28,13 @@
     <ItemGroup>
       <ProjectReference Include="..\StudyHub.DAL\StudyHub.DAL.csproj" />
     </ItemGroup>
+
+	<ItemGroup>
+		<Content Remove="**\node\LICENSE" />
+	</ItemGroup>
+
+	<PropertyGroup>
+		<ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
+	</PropertyGroup>
 
 </Project>

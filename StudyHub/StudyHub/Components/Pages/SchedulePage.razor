@@ -1,4 +1,5 @@
 ﻿@page "/schedule"
+
 @using StudyHub.DAL.Entities
 @using StudyHub.DAL.Repositories
 @using StudyHub.BLL.Services
@@ -14,95 +15,104 @@
 @using System.Linq
 @using System.IO
 
-<div class="app-container">
-    <div class="sidebar">
-        <NavLink class="icon-btn" href="/">
-            <i class="bi bi-house"></i>
-        </NavLink>
-        <NavLink class="icon-btn" href="/schedule">
-            <i class="bi bi-calendar"></i>
-        </NavLink>
-        <button class="icon-btn"><i class="bi bi-folder"></i></button>
-        <div class="bottom-user">
-            <i class="bi bi-person-circle"></i>
+<div class="schedule-container">
+    <div class="schedule-header">
+        <div class="schedule-header-left">
+            <select class="week-select">
+                <option value="current">Цей тиждень</option>
+                <option value="next">Наступний тиждень</option>
+            </select>
+
+            <select class="group-select">
+                <option value="ПМІ-31с">ПМІ-31с</option>
+                <option value="ПМІ-32с">ПМІ-32с</option>
+                <option value="ПМІ-33с">ПМІ-33с</option>
+                <option value="ПМІ-34с">ПМІ-34с</option>
+            </select>
         </div>
+
+        @if (isLoading)
+        {
+            <div class="loading-spinner">Оновлення...</div>
+        }
+        else
+        {
+            <button class="refresh-schedule-btn" @onclick="@(async () => await DownloadAndParseFromWebAsync())">
+                <span class="refresh-icon">🔄</span>
+                Оновити з сайту
+            </button>
+        }
     </div>
 
-    <div class="main-content">
-        <header class="header">
-            <h2>Schedule</h2>
-        </header>
+    @if (isLoading && !HasScheduleData)
+    {
+        <div class="loading-overlay">
+            <p>Завантаження розкладу...</p>
+        </div>
+    }
+    else
+    {
+        <div class="schedule-table-wrapper">
+            <table class="schedule-table">
+                <thead>
+                    <tr>
+                        <th class="time-column"></th>
+                        @foreach (var day in Days)
+                        {
+                            <th>@day</th>
+                        }
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var slot in TimeSlots)
+                    {
+                        var slotKey = $"{slot.Start:HH:mm} - {slot.End:HH:mm}";
 
-        <div class="schedule-table">
-            @if (isLoading)
-            {
-                <p>Завантаження розкладу...</p>
-            }
-            else
-            {
-                <table>
-                    <thead>
                         <tr>
-                            <th></th>
+                            <td class="time-cell">@slotKey</td>
+
                             @foreach (var day in Days)
                             {
-                                <th>@day</th>
-                            }
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var slot in TimeSlots)
-                        {
-                            var slotKey = $"{slot.Start:HH:mm} - {slot.End:HH:mm}";
-                            <tr>
-                                <td>@slotKey</td>
-                                @foreach (var day in Days)
-                                {
-                                    <td>
-                                        @if (RenderedSchedule.ContainsKey(day) && RenderedSchedule[day].ContainsKey(slotKey))
+                                <td class="lesson-cell">
+                                    @if (RenderedSchedule.ContainsKey(day) && RenderedSchedule[day].ContainsKey(slotKey))
+                                    {
+                                        foreach (var lesson in RenderedSchedule[day][slotKey])
                                         {
-                                            foreach (var lesson in RenderedSchedule[day][slotKey])
-                                            {
-                                                <div class="lesson-cell">
-                                                    <b>@(lesson.Subject?.Name ?? "Без назви")</b><br />
-                                                    <span>@lesson.Type</span><br />
-                                                    <span>Ауд. @lesson.Room</span><br />
-                                                    @if (lesson.Lecturer != null)
+                                            var typeClass = GetTypeClass(lesson.Type);
+
+                                            <div class="lesson-card @typeClass">
+                                                <div class="lesson-type">@lesson.Type</div>
+                                                <div class="lesson-subject">@(lesson.Subject?.Name ?? "Без назви")</div>
+
+                                                <div class="lesson-footer">
+                                                    <div class="lesson-room">@lesson.Room</div>
+                                                    @if (lesson.Lecturer != null && lesson.Lecturer.Any())
                                                     {
-                                                        <small>@string.Join(", ", lesson.Lecturer.Select(l => $"{l.Surname} {l.Name}"))</small>
+                                                        <div class="lesson-lecturer">
+                                                            @string.Join(", ", lesson.Lecturer.Select(l => $"{l.Surname} {l.Name}"))
+                                                        </div>
                                                     }
                                                 </div>
-                                            }
+                                            </div>
                                         }
-                                    </td>
-                                }
-                            </tr>
-                        }
-                    </tbody>
-                </table>
-            }
-
-            @if (!HasScheduleData && !isLoading)
-            {
-                <div class="upload-section">
-                    <h4>Розклад не знайдено</h4>
-                    <p>Натисніть для завантаження розкладу з сайту факультету:</p>
-
-                    <button class="parse-btn" @onclick="@(async () => await DownloadAndParseFromWebAsync())" style="margin-bottom: 15px;">
-                        <i class="bi bi-globe"></i> Завантажити з сайту факультету
-                    </button>
-                </div>
-            }
+                                    }
+                                </td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
         </div>
-    </div>
+    }
+
 </div>
 
-
 @code {
-    private string? uploadedFileName;
     private bool isLoading = true;
     private bool HasScheduleData => RenderedSchedule.Count > 0;
+    private string currentGroupName = "Невідома група";
 
+    // Дані для відображення
     private Dictionary<string, Dictionary<string, List<Lesson>>> RenderedSchedule = new();
     private List<string> Days = new();
     private List<LessonSlots> TimeSlots = new();
@@ -117,17 +127,11 @@
             var slotsFromDb = await SlotsRepo.GetAll();
             TimeSlots = slotsFromDb.OrderBy(s => s.Start).ToList();
 
-            string currentGroup = Preferences.Get("GroupName", "ПМІ-31с");
+            currentGroupName = Preferences.Get("GroupName", "ПМІ-31с");
 
-            if (currentGroup != null)
+            if (!string.IsNullOrEmpty(currentGroupName))
             {
-                var allSchedules = await ScheduleRepo.GetAll();
-                var mySchedule = allSchedules.FirstOrDefault(s => s.GroupName == currentGroup);
-
-                if (mySchedule != null && mySchedule.Lessons != null && mySchedule.Lessons.Any())
-                {
-                    UpdateRenderedSchedule(mySchedule.Lessons);
-                }
+                await LoadScheduleFromDb();
             }
         }
         catch (Exception ex)
@@ -137,6 +141,21 @@
         finally
         {
             isLoading = false;
+        }
+    }
+
+    private async System.Threading.Tasks.Task LoadScheduleFromDb()
+    {
+        System.Collections.Generic.List<StudyHub.DAL.Entities.Schedule> allSchedules = await ScheduleRepo.GetAll();
+        StudyHub.DAL.Entities.Schedule? mySchedule = allSchedules.FirstOrDefault(s => s.GroupName == currentGroupName);
+
+        if (mySchedule != null && mySchedule.Lessons != null && mySchedule.Lessons.Any())
+        {
+            UpdateRenderedSchedule(mySchedule.Lessons);
+        }
+        else
+        {
+            RenderedSchedule.Clear();
         }
     }
 
@@ -154,11 +173,22 @@
             );
     }
 
+    private string GetTypeClass(string type)
+    {
+        if (string.IsNullOrEmpty(type)) return "";
+
+        type = type.ToLower();
+        if (type.Contains("лек")) return "lesson-type-l";
+        if (type.Contains("прак") || type.Contains("лаб")) return "lesson-type-p";
+        if (type.Contains("сем")) return "lesson-type-s";
+
+        return "";
+    }
+
 
     private async System.Threading.Tasks.Task DownloadAndParseFromWebAsync()
     {
-        string groupName = Preferences.Get("GroupName", "ПМІ-31с");
-        if (string.IsNullOrEmpty(groupName))
+        if (string.IsNullOrEmpty(currentGroupName))
         {
             await JS.InvokeVoidAsync("alert", "Не встановлена група в налаштуваннях!");
             return;
@@ -168,21 +198,17 @@
 
         try
         {
-            IFacultyHelper faculty = UniversityServ.GetFacultyByGroup(groupName);
+            var facultyInfo = UniversityServ.GetFacultyByGroup(currentGroupName);
 
-            await JS.InvokeVoidAsync("alert", "Спроба завантажити розклад для вашого факультету!");
+            string pdfPath = await DownloaderService.DownloadSchedulePdfAsync(facultyInfo, currentGroupName);
 
-            string pdfPath = await DownloaderService.DownloadSchedulePdfAsync(faculty, groupName);
-
-            await JS.InvokeVoidAsync("alert", "Успішно завантажено розклад для вашого факультету!");
-            
             await RunParserAsync(pdfPath);
-            
-            await JS.InvokeVoidAsync("alert", "Розклад успішно оновлено з сайту!");
+
+            await JS.InvokeVoidAsync("alert", "Розклад успішно оновлено!");
         }
         catch (Exception ex)
         {
-            await JS.InvokeVoidAsync("alert", $"Помилка: {ex.Message}");
+            await JS.InvokeVoidAsync("alert", $"Помилка оновлення: {ex.Message}");
         }
         finally
         {
@@ -191,22 +217,41 @@
         }
     }
 
+    private async System.Threading.Tasks.Task HandleFileUploadAsync(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        if (file == null) return;
+
+        var folder = Path.Combine(AppContext.BaseDirectory, "Resources", "Schedules");
+        if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
+
+        var filePath = Path.Combine(folder, file.Name);
+        using var fs = new FileStream(filePath, FileMode.Create);
+        await file.OpenReadStream().CopyToAsync(fs);
+
+        isLoading = true;
+        try
+        {
+            await RunParserAsync(filePath);
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("alert", $"Помилка файлу: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
 
     private async System.Threading.Tasks.Task RunParserAsync(string filePath)
     {
-        string groupName = Preferences.Get("GroupName", "ПМІ-31с");
-        
-        if (string.IsNullOrEmpty(groupName))
-        {
-            throw new Exception("Група не обрана в налаштуваннях");
-        }
-
-        var schedule = await ScheduleService.ParseScheduleAsync(filePath, groupName);
+        var schedule = await ScheduleService.ParseScheduleAsync(filePath, currentGroupName);
 
         UpdateRenderedSchedule(schedule.Lessons);
 
         var freshSlots = await SlotsRepo.GetAll();
         TimeSlots = freshSlots.OrderBy(s => s.Start).ToList();
     }
-
 }

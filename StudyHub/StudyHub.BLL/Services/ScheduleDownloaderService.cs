@@ -13,7 +13,7 @@ public interface IFacultyHelper
 }
 
 
-public class AMIFacultyHelper : IFacultyHelper
+public class AmiFacultyHelper : IFacultyHelper
 {
     public string BaseUrl => "https://ami.lnu.edu.ua/students/rozklad-zanyat";
 
@@ -33,7 +33,7 @@ public class AMIFacultyHelper : IFacultyHelper
 
         if (!specializationMatch.Success || !courseMatch.Success)
         {
-            throw new Exception($"Не вдалося розпізнати формат групи: {groupName}");
+            throw new FormatException($"Не вдалося розпізнати формат групи: '{groupName}'. Очікуваний формат: 'ПМІ-31с'.");
         }
 
         string prefix = specializationMatch.Value;
@@ -105,7 +105,7 @@ public class ScheduleDownloaderService : IScheduleDownloaderService
 
         if (await linkLocator.CountAsync() == 0)
         {
-            throw new Exception($"Не знайдено PDF для {groupName} (Шукали: {coursePart} + {specPart})");
+            throw new FileNotFoundException($"Не знайдено PDF-файл розкладу на сайті для групи {groupName}. (Критерії пошуку: {coursePart} + {specPart})");
         }
 
         await linkLocator.First.ClickAsync();
