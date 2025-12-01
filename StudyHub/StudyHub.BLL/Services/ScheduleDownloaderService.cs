@@ -28,8 +28,10 @@ public class AmiFacultyHelper : IFacultyHelper
 
     public string GetLinkSearchCriteria(string groupName)
     {
-        var specializationMatch = Regex.Match(groupName, @"^([А-ЯІЇЄ]+)");
-        var courseMatch = Regex.Match(groupName, @"\d+");
+        var timeout = TimeSpan.FromMilliseconds(100);
+
+        var specializationMatch = Regex.Match(groupName, @"^([А-ЯІЇЄ]+)", RegexOptions.None, timeout);
+        var courseMatch = Regex.Match(groupName, @"\d+", RegexOptions.None, timeout);
 
         if (!specializationMatch.Success || !courseMatch.Success)
         {
