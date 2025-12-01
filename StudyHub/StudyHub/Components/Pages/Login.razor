@@ -1,0 +1,82 @@
+@page "/"
+@page "/login"
+@inject NavigationManager Navigation
+
+<div class="auth-container">
+    <div class="auth-logo">
+        <img src="images/hat.png" alt="StudyHub" class="auth-logo-icon" />
+        <h1 class="auth-logo-text"><span class="title-study">STUDY</span><span class="title-hub">HUB</span></h1>
+    </div>
+
+    <div class="auth-card">
+        <div class="auth-mascot">
+            <img src="images/fireduck.png" alt="FireDucks" />
+        </div>
+        
+        <h2 class="auth-title">Log In</h2>
+        
+        <div class="auth-form">
+            <div class="form-group">
+                <label>e-mail:</label>
+                <input type="email" @bind="email" class="form-input" />
+                @if (showError)
+                {
+                    <span class="validation-message">@errorMessage</span>
+                }
+            </div>
+
+            <div class="form-group">
+                <label>Password:</label>
+                <input type="password" @bind="password" class="form-input" placeholder="****************" />
+            </div>
+
+            <div class="forgot-password-link">
+                <a href="/forgot-password">Forgot Password</a>
+            </div>
+
+            <button class="auth-btn" @onclick="HandleLogin">Log In</button>
+
+            <div class="auth-footer">
+                Don't have an account? <a href="/register">Sign Up</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string email = "";
+    private string password = "";
+    private bool showError = false;
+    private string errorMessage = "";
+
+    // Test user data
+    private const string TEST_EMAIL = "dariia.hyrych@lnu.edu.ua";
+    private const string TEST_PASSWORD = "12345";
+    private const string TEST_NAME = "Dariia";
+    private const string TEST_SURNAME = "Hyrych";
+    private const string TEST_GROUP = "PMI-31";
+
+    private void HandleLogin()
+    {
+        showError = false;
+        
+        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
+        {
+            showError = true;
+            errorMessage = "Please fill in all fields";
+            return;
+        }
+
+        if (email == TEST_EMAIL && password == TEST_PASSWORD)
+        {
+            // TODO: Save user session/token
+            // For now, just navigate to home
+            Navigation.NavigateTo("/home");
+        }
+        else
+        {
+            showError = true;
+            errorMessage = "Invalid email or password";
+        }
+    }
+}

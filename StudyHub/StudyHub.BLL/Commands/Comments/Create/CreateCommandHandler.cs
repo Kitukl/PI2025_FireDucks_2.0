@@ -13,14 +13,20 @@ public class CreateCommandHandler : IRequestHandler<CreateCommand, int>
         _repository = repository;
         _taskRepository = taskRepository;
     }
+
     public async Task<int> Handle(CreateCommand request, CancellationToken cancellationToken)
     {
         var task = await _taskRepository.GetById(request.taskId);
-        var comment = new DAL.Entities.Comments()
+        if (task is null)
+        {
+            throw new InvalidOperationException();
+        }
+
+        var comment = new DAL.Entities.Comments
         {
             Description = request.description,
             Task = task,
-            CreationDate = DateTime.UtcNow
+            CreationDate = DateTime.UtcNow,
         };
         await _repository.CreateAsync(comment);
 

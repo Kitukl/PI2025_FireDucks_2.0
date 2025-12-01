@@ -39,6 +39,42 @@ namespace ConsoleApp.models
             cmd.Parameters.AddWithValue("@id", id);
             cmd.ExecuteNonQuery();
         }
+        public List<Subject> GetAll()
+        {
+            using var conn = DB.GetConnection();
+            string sql = "SELECT * FROM Subjects";
+            using var cmd = new NpgsqlCommand(sql, conn);
+            using var reader = cmd.ExecuteReader();
+
+            var list = new List<Subject>();
+            while (reader.Read())
+            {
+                list.Add(new Subject
+                {
+                    Id = reader.GetInt32(reader.GetOrdinal("subject_id")),
+                    Name = reader["name"] as string
+                });
+            }
+            return list;
+        }
+
+        public Subject GetById(int id)
+        {
+            using var conn = DB.GetConnection();
+            string sql = "SELECT * FROM Subjects WHERE subject_id=@id";
+            using var cmd = new NpgsqlCommand(sql, conn);
+            cmd.Parameters.AddWithValue("@id", id);
+
+            using var reader = cmd.ExecuteReader();
+            if (!reader.Read()) return null;
+
+            return new Subject
+            {
+                Id = reader.GetInt32(reader.GetOrdinal("subject_id")),
+                Name = reader["name"] as string
+            };
+        }
+
 
         public void GenerateSubjects()
         {

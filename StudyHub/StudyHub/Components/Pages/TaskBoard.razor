@@ -1,0 +1,547 @@
+﻿@page "/taskboard"
+@using StudyHub.BLL.Models
+
+<div class="taskboard-container" @onclick="CloseFilterDropdown">
+    <div class="taskboard-header">
+        <div class="search-wrapper">
+            <span class="search-icon">🔍</span>
+            <input type="text"
+                   placeholder="Search"
+                   @bind="searchQuery"
+                   @bind:event="oninput"
+                   class="taskboard-search" />
+        </div>
+
+        <button class="filter-btn" @onclick="ToggleFilterDropdown" @onclick:stopPropagation="true">
+            <span class="filter-icon">☰</span>
+            Filter By
+        </button>
+
+        <button class="create-task-btn" @onclick="OpenCreateTaskModal">
+            Create Task
+        </button>
+    </div>
+
+    @if (showFilterDropdown)
+    {
+        <div class="filter-dropdown" @onclick:stopPropagation="true">
+            <div class="filter-option" @onclick='() => SetFilter("")'>All Subjects</div>
+            <div class="filter-option" @onclick='() => SetFilter("Subject A")'>Subject A</div>
+            <div class="filter-option" @onclick='() => SetFilter("Subject B")'>Subject B</div>
+            <div class="filter-option" @onclick='() => SetFilter("Subject C")'>Subject C</div>
+        </div>
+    }
+
+    <div class="kanban-board">
+        <div class="kanban-column">
+            <div class="column-header">
+                <h3>To Do</h3>
+                <span class="task-count">↑↓</span>
+            </div>
+            <div class="column-content">
+                @foreach (var task in GetTasksByStatus("To Do"))
+                {
+                    <div class="task-card" @onclick="() => OpenTaskDetails(task)">
+                        <div class="task-card-header">
+                            <h4>@task.Name</h4>
+                            <span class="task-status-icon" style="@GetStatusIconColor(task)">@GetStatusIcon(task)</span>
+                        </div>
+                        <p class="task-subject">@task.Subject</p>
+                        <div class="task-card-footer">
+                            <span class="task-code">@task.Code</span>
+                            <span class="task-avatar">👤</span>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="kanban-column">
+            <div class="column-header">
+                <h3>In Progress</h3>
+                <span class="task-count">↑↓</span>
+            </div>
+            <div class="column-content">
+                @foreach (var task in GetTasksByStatus("In Progress"))
+                {
+                    <div class="task-card" @onclick="() => OpenTaskDetails(task)">
+                        <div class="task-card-header">
+                            <h4>@task.Name</h4>
+                            <span class="task-status-icon" style="@GetStatusIconColor(task)">@GetStatusIcon(task)</span>
+                        </div>
+                        <p class="task-subject">@task.Subject</p>
+                        <div class="task-card-footer">
+                            <span class="task-code">@task.Code</span>
+                            <span class="task-avatar">👤</span>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="kanban-column">
+            <div class="column-header">
+                <h3>For Review</h3>
+                <span class="task-count">↑↓</span>
+            </div>
+            <div class="column-content">
+                @foreach (var task in GetTasksByStatus("For Review"))
+                {
+                    <div class="task-card" @onclick="() => OpenTaskDetails(task)">
+                        <div class="task-card-header">
+                            <h4>@task.Name</h4>
+                            <span class="task-status-icon" style="@GetStatusIconColor(task)">@GetStatusIcon(task)</span>
+                        </div>
+                        <p class="task-subject">@task.Subject</p>
+                        <div class="task-card-footer">
+                            <span class="task-code">@task.Code</span>
+                            <span class="task-avatar">👤</span>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="kanban-column">
+            <div class="column-header">
+                <h3>Done</h3>
+                <span class="task-count">↑↓</span>
+            </div>
+            <div class="column-content">
+                @foreach (var task in GetTasksByStatus("Done"))
+                {
+                    <div class="task-card task-card-done" @onclick="() => OpenTaskDetails(task)">
+                        <div class="task-card-header">
+                            <h4>@task.Name</h4>
+                            <span class="task-status-icon" style="@GetStatusIconColor(task)">@GetStatusIcon(task)</span>
+                        </div>
+                        <p class="task-subject">@task.Subject</p>
+                        <div class="task-card-footer">
+                            <span class="task-code">@task.Code</span>
+                            <span class="task-avatar">👤</span>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    @if (showCreateModal)
+    {
+        <div class="modal-overlay" @onclick="CloseCreateTaskModal">
+            <div class="modal-content" @onclick:stopPropagation>
+                <div class="modal-header">
+                    <h2>Create Task</h2>
+                    <button class="modal-close" @onclick="CloseCreateTaskModal">×</button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Task Name</label>
+                        <input @bind="newTaskName"
+                               placeholder="Name your task..."
+                               class="form-input" />
+                    </div>
+
+                    <div class="form-group">
+                        <label>Description</label>
+                        <textarea @bind="newTaskDescription"
+                                  placeholder="Please describe what needs to be done..."
+                                  rows="4"
+                                  class="form-textarea"></textarea>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Subject</label>
+                            <select @bind="newTaskSubject" class="form-select">
+                                <option value="">Choose subject</option>
+                                <option value="Subject A">Subject A</option>
+                                <option value="Subject B">Subject B</option>
+                                <option value="Subject C">Subject C</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Due Date</label>
+                            <input type="date" @bind="newTaskDueDate" class="form-input" />
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Reminder</label>
+                        <div class="reminder-input">
+                            <input type="number" @bind="newTaskReminderDays" class="form-input-small" />
+                            <span>days before due date</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button @onclick="CloseCreateTaskModal" class="btn-secondary">Cancel</button>
+                    <button @onclick="CreateNewTask" class="btn-primary">Create</button>
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (selectedTask != null)
+    {
+        <div class="modal-overlay" @onclick="CloseTaskDetails">
+            <div class="modal-content modal-content-large" @onclick:stopPropagation>
+                <div class="modal-header">
+                    <div>
+                        <h2>@selectedTask.Name</h2>
+                        <p class="task-code-detail">@selectedTask.Code</p>
+                    </div>
+                    <button class="modal-close" @onclick="CloseTaskDetails">×</button>
+                </div>
+
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Task Name</label>
+                        @if (isEditMode)
+                        {
+                            <input type="text" @bind="editTaskName" class="form-input" placeholder="Enter task name" />
+                        }
+                        else
+                        {
+                            <p class="form-value">@selectedTask.Name</p>
+                        }
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Subject</label>
+                            @if (isEditMode)
+                            {
+                                <select @bind="editTaskSubject" class="form-select">
+                                    <option value="Subject A">Subject A</option>
+                                    <option value="Subject B">Subject B</option>
+                                    <option value="Subject C">Subject C</option>
+                                </select>
+                            }
+                            else
+                            {
+                                <p class="form-value">@selectedTask.Subject</p>
+                            }
+                        </div>
+                        <div class="form-group">
+                            <label>Status</label>
+                            <select @bind="selectedTaskStatus" class="form-select">
+                                <option value="To Do">To Do</option>
+                                <option value="In Progress">In Progress</option>
+                                <option value="For Review">For Review</option>
+                                <option value="Done">Done</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Due Date</label>
+                            @if (isEditMode)
+                            {
+                                <input type="date" @bind="editTaskDueDate" class="form-input" />
+                            }
+                            else
+                            {
+                                <p class="form-value">@(selectedTask.DueDate?.ToString("dd/MM/yyyy") ?? "Not set")</p>
+                            }
+                        </div>
+                        <div class="form-group">
+                            <label>Creation Date</label>
+                            <p class="form-value">@selectedTask.CreationDate.ToString("dd/MM/yyyy")</p>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Description</label>
+                        @if (isEditMode)
+                        {
+                            <textarea @bind="editTaskDescription" rows="4" class="form-textarea" placeholder="Enter description"></textarea>
+                        }
+                        else
+                        {
+                            <div class="description-box">
+                                <p>@selectedTask.Description</p>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="form-group">
+                        <label>Notes</label>
+                        <textarea placeholder="Add notes..." rows="3" class="form-textarea" @bind="taskNotes"></textarea>
+                        <button class="btn-primary" style="margin-top: 10px;" @onclick="SaveTaskNotes">Save Comment</button>
+                    </div>
+                </div>
+
+                <div class="modal-footer">
+                    <button @onclick="DeleteTask" class="btn-delete">Delete</button>
+                    <div class="modal-footer-right">
+                        <button @onclick="ToggleEditMode" class="btn-secondary">@(isEditMode ? "Cancel" : "Edit")</button>
+                        <button @onclick="SaveTaskChanges" class="btn-primary">@(isEditMode ? "Save Changes" : "Done")</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private List<TaskItem> tasks = new();
+    private string searchQuery = "";
+    private string filterSubject = "";
+    private bool showCreateModal = false;
+    private bool showFilterDropdown = false;
+    private TaskItem? selectedTask = null;
+    private string selectedTaskStatus = "";
+    private string taskNotes = "";
+    private bool isEditMode = false;
+    private string editTaskName = "";
+    private string editTaskDescription = "";
+    private string editTaskSubject = "";
+    private DateTime? editTaskDueDate;
+
+    private string newTaskName = "";
+    private string newTaskDescription = "";
+    private string newTaskSubject = "";
+    private DateTime? newTaskDueDate;
+    private int newTaskReminderDays = 2;
+
+    protected override void OnInitialized()
+    {
+        LoadTasks();
+    }
+
+    private void LoadTasks()
+    {
+        tasks = new List<TaskItem>
+        {
+            new TaskItem { Id = 1, Name = "New Task#1", Subject = "Subject A", Code = "A-1", Status = "To Do", Description = "Complete the first assignment", DueDate = DateTime.Now.AddDays(7), CreationDate = DateTime.Now.AddDays(-3) },
+            new TaskItem { Id = 2, Name = "New Task#2", Subject = "Subject B", Code = "B-1", Status = "In Progress", Description = "Work on project B", DueDate = DateTime.Now.AddDays(5), CreationDate = DateTime.Now.AddDays(-5) },
+            new TaskItem { Id = 3, Name = "New Task#3", Subject = "Subject C", Code = "C-1", Status = "In Progress", Description = "Study for exam", DueDate = DateTime.Now.AddDays(10), CreationDate = DateTime.Now.AddDays(-2) },
+            new TaskItem { Id = 4, Name = "New Task#4", Subject = "Subject B", Code = "B-2", Status = "In Progress", Description = "Submit report for review", DueDate = DateTime.Now.AddDays(3), CreationDate = DateTime.Now.AddDays(-4) },
+            new TaskItem { Id = 5, Name = "New Task#5", Subject = "Subject A", Code = "A-2", Status = "Done", Description = "Create presentation", DueDate = DateTime.Now.AddDays(-2), CreationDate = DateTime.Now.AddDays(-10) },
+            new TaskItem { Id = 6, Name = "New Task#6", Subject = "Subject C", Code = "C-2", Status = "For Review", Description = "Lab work completion", DueDate = DateTime.Now.AddDays(4), CreationDate = DateTime.Now.AddDays(-6) },
+            new TaskItem { Id = 7, Name = "New Task#7", Subject = "Subject A", Code = "A-3", Status = "For Review", Description = "Read chapters 5-7", DueDate = DateTime.Now.AddDays(6), CreationDate = DateTime.Now.AddDays(-1) },
+        };
+    }
+
+    private IEnumerable<TaskItem> GetTasksByStatus(string status)
+    {
+        return tasks.Where(t => t.Status == status &&
+                               (string.IsNullOrEmpty(searchQuery) || t.Name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)) &&
+                               (string.IsNullOrEmpty(filterSubject) || t.Subject == filterSubject));
+    }
+
+    private void ToggleFilterDropdown()
+    {
+        showFilterDropdown = !showFilterDropdown;
+    }
+
+    private void CloseFilterDropdown()
+    {
+        showFilterDropdown = false;
+    }
+
+    private void SetFilter(string subject)
+    {
+        filterSubject = subject;
+        showFilterDropdown = false;
+    }
+
+    private void OpenCreateTaskModal()
+    {
+        showCreateModal = true;
+        ResetCreateForm();
+    }
+
+    private void CloseCreateTaskModal()
+    {
+        showCreateModal = false;
+        ResetCreateForm();
+    }
+
+    private void ResetCreateForm()
+    {
+        newTaskName = "";
+        newTaskDescription = "";
+        newTaskSubject = "";
+        newTaskDueDate = null;
+        newTaskReminderDays = 2;
+    }
+
+    private void OpenTaskDetails(TaskItem task)
+    {
+        selectedTask = task;
+        selectedTaskStatus = task.Status;
+        taskNotes = "";
+        isEditMode = false;
+        editTaskName = task.Name;
+        editTaskDescription = task.Description;
+        editTaskSubject = task.Subject;
+        editTaskDueDate = task.DueDate;
+    }
+
+    private void CloseTaskDetails()
+    {
+        selectedTask = null;
+        taskNotes = "";
+        isEditMode = false;
+    }
+
+    private void CreateNewTask()
+    {
+        if (string.IsNullOrWhiteSpace(newTaskName))
+            return;
+
+        var taskCount = tasks.Count(t => t.Subject == newTaskSubject) + 1;
+        var subjectCode = newTaskSubject.Replace("Subject ", "");
+
+        var newTask = new TaskItem
+        {
+            Id = tasks.Count > 0 ? tasks.Max(t => t.Id) + 1 : 1,
+            Name = newTaskName,
+            Description = newTaskDescription,
+            Subject = newTaskSubject,
+            Code = $"{subjectCode}-{taskCount}",
+            DueDate = newTaskDueDate,
+            CreationDate = DateTime.Now,
+            Status = "To Do",
+            ReminderDays = newTaskReminderDays
+        };
+
+        tasks.Add(newTask);
+        CloseCreateTaskModal();
+    }
+
+    private void ToggleEditMode()
+    {
+        isEditMode = !isEditMode;
+        if (!isEditMode && selectedTask != null)
+        {
+            // Скасування змін - повернення до оригінальних значень
+            editTaskName = selectedTask.Name;
+            editTaskDescription = selectedTask.Description;
+            editTaskSubject = selectedTask.Subject;
+            editTaskDueDate = selectedTask.DueDate;
+        }
+    }
+
+    private void SaveTaskChanges()
+    {
+        if (selectedTask != null)
+        {
+            selectedTask.Status = selectedTaskStatus;
+            
+            if (isEditMode)
+            {
+                selectedTask.Name = editTaskName;
+                selectedTask.Description = editTaskDescription;
+                selectedTask.Subject = editTaskSubject;
+                selectedTask.DueDate = editTaskDueDate;
+                isEditMode = false;
+            }
+        }
+        CloseTaskDetails();
+    }
+
+    private void SaveTaskNotes()
+    {
+        if (!string.IsNullOrWhiteSpace(taskNotes))
+        {
+            // Тут можна додати логіку збереження коментаря в базу даних
+            // Наразі просто очищаємо поле після "збереження"
+            taskNotes = "";
+        }
+    }
+
+    private void DeleteTask()
+    {
+        if (selectedTask != null)
+        {
+            tasks.Remove(selectedTask);
+            CloseTaskDetails();
+        }
+    }
+
+    private string GetStatusIcon(TaskItem task)
+    {
+        if (task.Status == "Done")
+        {
+            // Якщо Done і дедлайн пропущений - червоний хрестик
+            if (task.DueDate.HasValue && task.DueDate.Value.Date < DateTime.Now.Date)
+            {
+                return "✖";
+            }
+            // Якщо Done до дедлайну - галочка
+            return "✓";
+        }
+
+        if (!task.DueDate.HasValue)
+        {
+            return "⚫"; // Заповнений кружок якщо немає дедлайну
+        }
+
+        var daysUntilDue = (task.DueDate.Value.Date - DateTime.Now.Date).Days;
+
+        if (daysUntilDue < 0)
+        {
+            // Пропущений дедлайн
+            return "✖";
+        }
+        else if (daysUntilDue <= 1)
+        {
+            // 1 день або сьогодні
+            return "!!";
+        }
+        else if (daysUntilDue <= 3)
+        {
+            // 2-3 дні
+            return "!";
+        }
+        else if (daysUntilDue <= 7)
+        {
+            // 4-7 днів
+            return "○";
+        }
+        else
+        {
+            // 8+ днів
+            return "⚫";
+        }
+    }
+
+    private string GetStatusIconColor(TaskItem task)
+    {
+        if (task.Status == "Done")
+        {
+            // Якщо Done і дедлайн пропущений - червоний
+            if (task.DueDate.HasValue && task.DueDate.Value.Date < DateTime.Now.Date)
+            {
+                return "color: #dc3545;";
+            }
+            // Якщо Done до дедлайну - зелений
+            return "color: #28a745;";
+        }
+
+        if (!task.DueDate.HasValue)
+        {
+            return "color: var(--color-text-primary);";
+        }
+
+        var daysUntilDue = (task.DueDate.Value.Date - DateTime.Now.Date).Days;
+
+        if (daysUntilDue < 0 || daysUntilDue <= 3)
+        {
+            // Пропущений дедлайн або критично близько (1-3 дні)
+            return "color: #dc3545;";
+        }
+        else
+        {
+            // Все інше - звичайний колір
+            return "color: var(--color-text-primary);";
+        }
+    }
+}

@@ -1,0 +1,65 @@
+@page "/register"
+@inject NavigationManager Navigation
+
+<div class="auth-container">
+    <div class="auth-logo">
+        <img src="images/hat.png" alt="StudyHub" class="auth-logo-icon" />
+        <h1 class="auth-logo-text"><span class="title-study">STUDY</span><span class="title-hub">HUB</span></h1>
+    </div>
+
+    <div class="auth-card">
+        <div class="auth-mascot">
+            <img src="images/fireduck.png" alt="FireDucks" />
+        </div>
+        
+        <h2 class="auth-title">Registration form</h2>
+        
+        <div class="auth-form">
+            <div class="form-group">
+                <label>Name:</label>
+                <input type="text" @bind="name" class="form-input" />
+            </div>
+
+            <div class="form-group">
+                <label>Surname:</label>
+                <input type="text" @bind="surname" class="form-input" />
+            </div>
+
+            <div class="form-group">
+                <label>e-mail:</label>
+                <input type="email" @bind="email" class="form-input" />
+            </div>
+
+            <div class="form-group">
+                <label>Group:</label>
+                <select @bind="group" class="form-select">
+                    <option value="">Choose your group</option>
+                    <option value="PMI-31">PMI-31</option>
+                    <option value="PMI-32">PMI-32</option>
+                    <option value="PMI-33">PMI-33</option>
+                    <option value="PMI-34">PMI-34</option>
+                </select>
+            </div>
+
+            <button class="auth-btn" @onclick="SignUp">Sign up</button>
+
+            <div class="auth-footer">
+                Already have an account? <a href="/login">Log In</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    private string name = "";
+    private string surname = "";
+    private string email = "";
+    private string group = "";
+
+    private void SignUp()
+    {
+        // TODO: Validation
+        // Navigate to finish registration
+        Navigation.NavigateTo("/finish-registration");
+    }
+}

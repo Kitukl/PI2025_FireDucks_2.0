@@ -12,7 +12,7 @@ public class CommentsRepository : IBaseRepository<Comments>
         _context = context;
     }
 
-    public async Task<Comments> CreateAsync(Comments item)
+    public virtual async Task<Comments> CreateAsync(Comments item)
     {
         await _context.Comments.AddAsync(item);
         await _context.SaveChangesAsync();
@@ -20,12 +20,12 @@ public class CommentsRepository : IBaseRepository<Comments>
         return item;
     }
 
-    public async Task<List<Comments>> GetAll()
+    public virtual async Task<List<Comments>> GetAll()
     {
         return await _context.Comments.ToListAsync();
     }
 
-    public async Task<int> UpdateAsync(Comments item)
+    public virtual async Task<int> UpdateAsync(Comments item)
     {
         await _context.Comments
             .Where(t => t.Id == item.Id)
@@ -38,7 +38,7 @@ public class CommentsRepository : IBaseRepository<Comments>
         return item.Id;
     }
 
-    public async Task<int> DeleteAsync(int id)
+    public virtual async Task<int> DeleteAsync(int id)
     {
         await _context.Comments
             .Where(u => u.Id == id)
@@ -48,7 +48,7 @@ public class CommentsRepository : IBaseRepository<Comments>
         return id;
     }
 
-    public async Task<Comments> GetById(int id)
+    public virtual async Task<Comments> GetById(int id)
     {
         var comment = await _context.Comments
             .FirstOrDefaultAsync(u => u.Id == id);

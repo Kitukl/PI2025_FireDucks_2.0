@@ -1,23 +1,62 @@
-﻿@page "/"
+﻿@page "/home"
 
-<div class="app-container">
-    <div class="sidebar">
-        <NavLink class="icon-btn" href="/">
-            <i class="bi bi-house"></i>
-        </NavLink>
-
-        <NavLink class="icon-btn" href="/schedule">
-            <i class="bi bi-calendar"></i>
-        </NavLink>
-
-        <button class="icon-btn"><i class="bi bi-folder"></i></button>
-
-        <div class="bottom-user">
-            <i class="bi bi-person-circle"></i>
-        </div>
+<div class="home-container">
+    <div class="info-icon-wrapper" @onmouseenter="ShowPopup" @onmouseleave="HidePopup">
+        <button class="info-icon-button">ℹ️</button>
+        
+        @if (showInfoPopup)
+        {
+            <div class="info-popup">
+                <div class="popup-arrow"></div>
+                <div class="popup-content">
+                    <p><strong>Studyhub</strong> — is a productivity app designed to help you stay organized and never miss a deadline. It lets you manage your tasks with statuses and due dates in a simple kanban board, so you can clearly track your progress.</p>
+                </div>
+            </div>
+        }
     </div>
-
-    <div class="main-content home">
-        <h1 style="margin:auto;">Welcome to StudyHub</h1>
+    
+    @if (showInfoPopup)
+    {
+        <div class="popup-overlay"></div>
+    }
+    <div class="home-header">
+        <img src="images/hat.png" alt="StudyHub" class="home-logo-icon" />
+        <h1 class="home-title"><span class="title-study">STUDY</span><span class="title-hub">HUB</span></h1>
+    </div>
+    
+    <div class="home-cards">
+        <a href="/profile" class="home-card">
+            <span>My Profile</span>
+        </a>
+        
+        <a href="/taskboard" class="home-card">
+            <span>Task Board</span>
+        </a>
+        
+        <a href="/schedule" class="home-card">
+            <span>My Schedule</span>
+        </a>
+        
+        <a href="/storage" class="home-card">
+            <span>Storage</span>
+        </a>
+    </div>
+    
+    <div class="home-mascot">
+        <img src="images/fireduck.png" alt="FireDucks Mascot" />
     </div>
 </div>
+
+@code {
+    private bool showInfoPopup = false;
+    
+    private void ShowPopup()
+    {
+        showInfoPopup = true;
+    }
+    
+    private void HidePopup()
+    {
+        showInfoPopup = false;
+    }
+}
