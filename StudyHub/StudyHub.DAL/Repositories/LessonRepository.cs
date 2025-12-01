@@ -22,7 +22,11 @@ public class LessonRepository : IBaseRepository<Lesson>
 
     public async Task<List<Lesson>> GetAll()
     {
-        return await _context.Lessons.ToListAsync();
+        return await _context.Lessons
+            .Include(l => l.Subject)
+            .Include(l => l.Lecturer)
+            .Include(l => l.LessonSlot)
+            .ToListAsync();
     }
 
     public async Task<int> UpdateAsync(Lesson item)

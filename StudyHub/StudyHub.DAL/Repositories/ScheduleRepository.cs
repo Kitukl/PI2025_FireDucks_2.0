@@ -22,16 +22,19 @@ public class ScheduleRepository : IBaseRepository<Schedule>
 
     public async Task<List<Schedule>> GetAll()
     {
-        return await _context.Schedules.ToListAsync();
+        return await _context.Schedules
+            .Include(s => s.Lessons)
+                .ThenInclude(l => l.Subject)
+            .Include(s => s.Lessons)
+                .ThenInclude(l => l.Lecturer)
+            .Include(s => s.Lessons)
+                .ThenInclude(l => l.LessonSlot)
+            .ToListAsync();
     }
 
     public async Task<int> UpdateAsync(Schedule item)
     {
-        await _context.Schedules
-            .Where(t => t.Id == item.Id)
-            .ExecuteUpdateAsync(s => s
-                .SetProperty(p => p.Users, item.Users)
-                .SetProperty(p => p.Lessons, item.Lessons));
+        _context.Schedules.Update(item);
 
         await _context.SaveChangesAsync();
 
@@ -50,9 +53,22 @@ public class ScheduleRepository : IBaseRepository<Schedule>
 
     public async Task<Schedule> GetById(int id)
     {
-        var schedule = await _context.Schedules
+        Schedule schedule = await _context.Schedules
+            .Include(s => s.Lessons)
+                .ThenInclude(l => l.Subject)
+            .Include(s => s.Lessons)
+                .ThenInclude(l => l.Lecturer)
+            .Include(s => s.Lessons)
+                .ThenInclude(l => l.LessonSlot)
             .FirstOrDefaultAsync(u => u.Id == id);
 
-        return schedule ?? throw new Exception("Schedule not found");
+
+        if (schedule == null)
+        {
+            throw new ArgumentException($"Schedule with id {id} not found");
+        }
+
+        return schedule;
+
     }
 }

@@ -68,3 +68,5 @@ _ReSharper*/
 
 !/.github/
 !/.github/workflows/
+
+schedule_parser.exe

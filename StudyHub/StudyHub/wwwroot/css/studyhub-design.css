@@ -1797,15 +1797,15 @@ h4 {
     background-color: var(--color-bg-white);
 }
 
-.lesson-card.lesson-type-л {
+.lesson-card.lesson-type-l {
     background-color: #e3f2fd;
 }
 
-.lesson-card.lesson-type-п {
+.lesson-card.lesson-type-p {
     background-color: #f3e5f5;
 }
 
-.lesson-card.lesson-type-с {
+.lesson-card.lesson-type-s {
     background-color: #fff3e0;
 }
 

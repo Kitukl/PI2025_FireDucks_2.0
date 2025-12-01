@@ -86,11 +86,27 @@
           <PrivateAssets>all</PrivateAssets>
           <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
+        <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
     </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\StudyHub.BLL\StudyHub.BLL.csproj" />
-    <ProjectReference Include="..\StudyHub.DAL\StudyHub.DAL.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<Content Include="..\StudyHub.BLL\Parsers\schedule_parser.exe">
+			<Link>Parsers\schedule_parser.exe</Link>
+			<CopyToOutputDirectory>CopyIfNewer</CopyToOutputDirectory>
+		</Content>
+	</ItemGroup>
+
+	<ItemGroup>
+      <ProjectReference Include="..\StudyHub.BLL\StudyHub.BLL.csproj" />
+      <ProjectReference Include="..\StudyHub.DAL\StudyHub.DAL.csproj" />
+    </ItemGroup>
+
+	<ItemGroup>
+		<Content Remove="**\node\LICENSE" />
+	</ItemGroup>
+
+	<PropertyGroup>
+		<ErrorOnDuplicatePublishOutputFiles>false</ErrorOnDuplicatePublishOutputFiles>
+	</PropertyGroup>
 
 </Project>
