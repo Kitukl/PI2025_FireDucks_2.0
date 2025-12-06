@@ -1,70 +1,117 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using StudyHub.DAL.Entities;
 
-namespace StudyHub.DAL.Repositories;
-
-public class TaskRepository : IBaseRepository<DAL.Entities.Task>
+namespace StudyHub.DAL.Repositories
 {
-    private readonly StudyContext _context;
-
-    public TaskRepository(StudyContext context)
+    public class TaskRepository : IBaseRepository<DAL.Entities.Task>
     {
-        _context = context;
-    }
+        private readonly StudyContext _context;
 
-    public virtual async Task<DAL.Entities.Task> CreateAsync(DAL.Entities.Task item)
-    {
-        await _context.Tasks.AddAsync(item);
-        await _context.SaveChangesAsync();
+        public TaskRepository(StudyContext context)
+        {
+            _context = context;
+        }
 
-        return item;
-    }
+        public virtual async System.Threading.Tasks.Task<DAL.Entities.Task> CreateAsync(DAL.Entities.Task item)
+        {
+            try
+            {
+                Console.WriteLine($"TaskRepository.CreateAsync called");
+                Console.WriteLine($"  UserId: {item.UserId}");
+                Console.WriteLine($"  Title: {item.Title}");
+                Console.WriteLine($"  Description: {item.Description}");
+                Console.WriteLine($"  Deadline: {item.Deadline}");
+                Console.WriteLine($"  Status: {item.Status}");
+                Console.WriteLine($"  CreationDate: {item.CreationDate}");
 
-    public virtual async Task<List<DAL.Entities.Task>> GetAll()
-    {
-        return await _context.Tasks.ToListAsync();
-    }
+                await _context.Tasks.AddAsync(item);
+                Console.WriteLine("Calling SaveChangesAsync...");
+                await _context.SaveChangesAsync();
+                Console.WriteLine($"Task saved successfully with Id: {item.Id}");
 
-    public virtual async Task<int> UpdateAsync(DAL.Entities.Task item)
-    {
-        await _context.Tasks
-            .Where(u => u.Id == item.Id)
-            .ExecuteUpdateAsync(s => s
-                .SetProperty(p => p.CommentsList, item.CommentsList)
-                .SetProperty(p => p.Deadline, item.Deadline)
-                .SetProperty(p => p.Description, item.Description)
-                .SetProperty(p => p.Status, item.Status)
-                .SetProperty(p => p.Title, item.Title)
-                .SetProperty(p => p.Title, item.Title)
-                .SetProperty(p => p.User, item.User));
+                return item;
+            }
+            catch (DbUpdateException dbEx)
+            {
+                Console.WriteLine($"DbUpdateException: {dbEx.Message}");
+                Console.WriteLine($"Inner exception: {dbEx.InnerException?.Message}");
+                throw;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"General exception: {ex.Message}");
+                Console.WriteLine($"Inner exception: {ex.InnerException?.Message}");
+                throw;
+            }
+        }
 
-        await _context.SaveChangesAsync();
+        public virtual async System.Threading.Tasks.Task<List<DAL.Entities.Task>> GetAll()
+        {
+            return await _context.Tasks
+                .Include(t => t.User)
+                .ToListAsync();
+        }
 
-        return item.Id;
-    }
+        public virtual async System.Threading.Tasks.Task<int> UpdateAsync(DAL.Entities.Task item)
+        {
+            try
+            {
+                Console.WriteLine($"=== TaskRepository.UpdateAsync ===");
+                Console.WriteLine($"Id: {item.Id}");
+                Console.WriteLine($"Title: {item.Title}");
+                Console.WriteLine($"Description: {item.Description}");
+                Console.WriteLine($"Status: {item.Status}");
+                Console.WriteLine($"Deadline: {item.Deadline}");
 
-    public virtual async Task<int> DeleteAsync(int id)
-    {
-        await _context.Tasks
-            .Where(u => u.Id == id)
-            .ExecuteDeleteAsync();
+                var existingTask = await _context.Tasks.FindAsync(item.Id);
 
-        await _context.SaveChangesAsync();
-        return id;
-    }
+                if (existingTask == null)
+                {
+                    throw new Exception($"Task with Id {item.Id} not found");
+                }
 
-    public virtual async Task<DAL.Entities.Task> GetById(int id)
-    {
-        var task = await _context.Tasks
-            .FirstOrDefaultAsync(u => u.Id == id);
+                existingTask.Title = item.Title;
+                existingTask.Description = item.Description;
+                existingTask.Deadline = item.Deadline;
+                existingTask.Status = item.Status;
 
-        return task ?? throw new Exception("Task not found");
-    }
+                _context.Tasks.Update(existingTask);
+                var changes = await _context.SaveChangesAsync();
 
-    public async Task<List<DAL.Entities.Task>> GetByUser(int userId)
-    {
-        return await _context.Tasks
-            .Where(t => t.User.Id == userId)
-            .ToListAsync();
+                Console.WriteLine($"✅ Changes saved: {changes}");
+
+                return existingTask.Id;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ Error updating task: {ex.Message}");
+                Console.WriteLine($"Inner: {ex.InnerException?.Message}");
+                throw;
+            }
+        }
+
+        public virtual async System.Threading.Tasks.Task<int> DeleteAsync(int id)
+        {
+            await _context.Tasks
+                .Where(t => t.Id == id)
+                .ExecuteDeleteAsync();
+            return id;
+        }
+
+        public virtual async System.Threading.Tasks.Task<DAL.Entities.Task> GetById(int id)
+        {
+            var task = await _context.Tasks
+                .Include(t => t.User)
+                .FirstOrDefaultAsync(t => t.Id == id);
+            return task ?? throw new Exception("Task not found");
+        }
+
+        public async System.Threading.Tasks.Task<List<DAL.Entities.Task>> GetByUser(int userId)
+        {
+            return await _context.Tasks
+                .Include(t => t.User)
+                .Where(t => t.UserId == userId)
+                .ToListAsync();
+        }
     }
 }

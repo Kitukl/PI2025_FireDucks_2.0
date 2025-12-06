@@ -14,45 +14,87 @@ public class CommentsRepository : IBaseRepository<Comments>
 
     public virtual async Task<Comments> CreateAsync(Comments item)
     {
-        await _context.Comments.AddAsync(item);
-        await _context.SaveChangesAsync();
+        try
+        {
+            Console.WriteLine($"Creating comment for TaskId: {item.TaskId}, UserId: {item.UserId}");
+            Console.WriteLine($"Description: {item.Description}");
+            Console.WriteLine($"CreationDate: {item.CreationDate}");
 
-        return item;
+            await _context.Comments.AddAsync(item);
+            var changes = await _context.SaveChangesAsync();
+
+            Console.WriteLine($"Comment saved: {changes} changes, Id: {item.Id}");
+
+            return item;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error creating comment: {ex.Message}");
+            Console.WriteLine($"Inner: {ex.InnerException?.Message}");
+            throw;
+        }
     }
 
     public virtual async Task<List<Comments>> GetAll()
     {
-        return await _context.Comments.ToListAsync();
+        return await _context.Comments
+            .Include(c => c.User)
+            .Include(c => c.Task)
+            .ToListAsync();
     }
 
     public virtual async Task<int> UpdateAsync(Comments item)
     {
-        await _context.Comments
-            .Where(t => t.Id == item.Id)
-            .ExecuteUpdateAsync(s => s
-                .SetProperty(p => p.Description, item.Description)
-                .SetProperty(p => p.Task, item.Task));
+        try
+        {
+            var existingComment = await _context.Comments.FindAsync(item.Id);
 
-        await _context.SaveChangesAsync();
+            if (existingComment == null)
+            {
+                throw new Exception($"Comment with Id {item.Id} not found");
+            }
 
-        return item.Id;
+            existingComment.Description = item.Description;
+
+            _context.Comments.Update(existingComment);
+            var changes = await _context.SaveChangesAsync();
+
+            Console.WriteLine($"Comment updated: {changes} changes");
+
+            return existingComment.Id;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error updating comment: {ex.Message}");
+            throw;
+        }
     }
 
     public virtual async Task<int> DeleteAsync(int id)
     {
         await _context.Comments
-            .Where(u => u.Id == id)
+            .Where(c => c.Id == id)
             .ExecuteDeleteAsync();
 
-        await _context.SaveChangesAsync();
         return id;
     }
 
     public virtual async Task<Comments> GetById(int id)
     {
         var comment = await _context.Comments
-            .FirstOrDefaultAsync(u => u.Id == id);
+            .Include(c => c.User)
+            .Include(c => c.Task)
+            .FirstOrDefaultAsync(c => c.Id == id);
 
         return comment ?? throw new Exception("Comment not found");
+    }
+
+    public virtual async Task<List<Comments>> GetByTaskId(int taskId)
+    {
+        return await _context.Comments
+            .Include(c => c.User)
+            .Where(c => c.TaskId == taskId)
+            .OrderByDescending(c => c.CreationDate)
+            .ToListAsync();
     }
 }

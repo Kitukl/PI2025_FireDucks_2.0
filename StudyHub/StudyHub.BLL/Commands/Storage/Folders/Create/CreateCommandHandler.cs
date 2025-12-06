@@ -14,6 +14,6 @@ public class CreateCommandHandler : IRequestHandler<CreateCommand>
 
     public async System.Threading.Tasks.Task Handle(CreateCommand request, CancellationToken cancellationToken)
     {
-        await _fileStorage.CreateFolderAsync(request.FolderPath);
+        await _fileStorage.CreateFolderAsync(request.UserId, request.FolderPath);
     }
 }

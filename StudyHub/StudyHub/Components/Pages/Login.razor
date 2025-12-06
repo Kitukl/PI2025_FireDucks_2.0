@@ -1,41 +1,50 @@
 @page "/"
 @page "/login"
 @inject NavigationManager Navigation
+@inject IUserService UserService
+@inject AuthStateService AuthState
 
 <div class="auth-container">
     <div class="auth-logo">
         <img src="images/hat.png" alt="StudyHub" class="auth-logo-icon" />
         <h1 class="auth-logo-text"><span class="title-study">STUDY</span><span class="title-hub">HUB</span></h1>
     </div>
-
     <div class="auth-card">
         <div class="auth-mascot">
             <img src="images/fireduck.png" alt="FireDucks" />
         </div>
-        
+
         <h2 class="auth-title">Log In</h2>
-        
+
         <div class="auth-form">
+            @if (showError)
+            {
+                <div class="alert alert-danger" style="color: red; margin-bottom: 10px; padding: 10px; border: 1px solid red;">
+                    @errorMessage
+                </div>
+            }
+
             <div class="form-group">
                 <label>e-mail:</label>
                 <input type="email" @bind="email" class="form-input" />
-                @if (showError)
-                {
-                    <span class="validation-message">@errorMessage</span>
-                }
             </div>
-
             <div class="form-group">
                 <label>Password:</label>
                 <input type="password" @bind="password" class="form-input" placeholder="****************" />
             </div>
-
             <div class="forgot-password-link">
                 <a href="/forgot-password">Forgot Password</a>
             </div>
-
-            <button class="auth-btn" @onclick="HandleLogin">Log In</button>
-
+            <button class="auth-btn" @onclick="HandleLogin" disabled="@isLoading">
+                @if (isLoading)
+                {
+                    <span>Loading...</span>
+                }
+                else
+                {
+                    <span>Log In</span>
+                }
+            </button>
             <div class="auth-footer">
                 Don't have an account? <a href="/register">Sign Up</a>
             </div>
@@ -48,35 +57,51 @@
     private string password = "";
     private bool showError = false;
     private string errorMessage = "";
+    private bool isLoading = false;
 
-    // Test user data
-    private const string TEST_EMAIL = "dariia.hyrych@lnu.edu.ua";
-    private const string TEST_PASSWORD = "12345";
-    private const string TEST_NAME = "Dariia";
-    private const string TEST_SURNAME = "Hyrych";
-    private const string TEST_GROUP = "PMI-31";
-
-    private void HandleLogin()
+    private async Task HandleLogin()
     {
         showError = false;
-        
-        if (string.IsNullOrWhiteSpace(email) || string.IsNullOrWhiteSpace(password))
+        errorMessage = "";
+
+        if (string.IsNullOrWhiteSpace(email))
         {
             showError = true;
-            errorMessage = "Please fill in all fields";
+            errorMessage = "Please enter your email";
             return;
         }
 
-        if (email == TEST_EMAIL && password == TEST_PASSWORD)
-        {
-            // TODO: Save user session/token
-            // For now, just navigate to home
-            Navigation.NavigateTo("/home");
-        }
-        else
+        if (string.IsNullOrWhiteSpace(password))
         {
             showError = true;
-            errorMessage = "Invalid email or password";
+            errorMessage = "Please enter your password";
+            return;
+        }
+
+        try
+        {
+            isLoading = true;
+
+            var response = await UserService.LoginAsync(email, password);
+
+            AuthState.SetAuthenticatedUser(response.Id, response.Name, response.Surname, response.Email, response.GroupName);
+
+            Navigation.NavigateTo("/home");
+        }
+        catch (InvalidOperationException ex)
+        {
+            showError = true;
+            errorMessage = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            showError = true;
+            errorMessage = "An error occurred during login. Please try again.";
+            Console.WriteLine($"Login error: {ex}");
+        }
+        finally
+        {
+            isLoading = false;
         }
     }
 }
