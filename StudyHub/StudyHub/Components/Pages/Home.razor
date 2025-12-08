@@ -1,4 +1,8 @@
 ﻿@page "/home"
+@inject ILogger<Home> Logger
+@inject AuthStateService AuthState
+@inject NavigationManager Navigation
+
 <div class="home-container">
     <div class="info-icon-wrapper" @onmouseenter="ShowPopup" @onmouseleave="HidePopup">
         <button class="info-icon-button">ℹ️</button>
@@ -212,16 +216,40 @@
     }
 </style>
 
+
 @code {
     private bool showInfoPopup = false;
 
+    protected override void OnInitialized()
+    {
+        Logger.LogInformation("Відкриття домашньої сторінки");
+
+        if (AuthState.IsAuthenticated && AuthState.UserId.HasValue)
+        {
+            Logger.LogInformation("Користувач на домашній сторінці: UserId={UserId}, Name={Name}",
+                AuthState.UserId.Value, AuthState.UserName ?? "Unknown");
+        }
+        else
+        {
+            Logger.LogWarning("Відкриття домашньої сторінки без автентифікації");
+        }
+    }
+
     private void ShowPopup()
     {
+        Logger.LogDebug("Відображення інформаційного попапу");
         showInfoPopup = true;
     }
 
     private void HidePopup()
     {
+        Logger.LogDebug("Приховування інформаційного попапу");
         showInfoPopup = false;
+    }
+
+    private void LogNavigation(string destination)
+    {
+        Logger.LogInformation("Навігація з домашньої сторінки: Destination={Destination}, UserId={UserId}",
+            destination, AuthState.UserId);
     }
 }

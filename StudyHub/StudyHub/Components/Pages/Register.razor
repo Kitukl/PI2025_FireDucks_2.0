@@ -1,6 +1,7 @@
 @page "/register"
 @inject NavigationManager Navigation
 @inject IUserService UserService
+@inject ILogger<Register> Logger
 
 <div class="auth-container">
     <div class="auth-logo">
@@ -86,49 +87,59 @@
 
     private async Task SignUp()
     {
+        Logger.LogInformation("Початок процесу реєстрації на UI");
         errorMessage = "";
 
         if (string.IsNullOrWhiteSpace(name))
         {
             errorMessage = "Please enter your name";
+            Logger.LogWarning("Валідація не пройдена: порожнє ім'я");
             return;
         }
 
         if (string.IsNullOrWhiteSpace(surname))
         {
             errorMessage = "Please enter your surname";
+            Logger.LogWarning("Валідація не пройдена: порожнє прізвище");
             return;
         }
 
         if (string.IsNullOrWhiteSpace(email))
         {
             errorMessage = "Please enter your email";
+            Logger.LogWarning("Валідація не пройдена: порожній email");
             return;
         }
 
         if (string.IsNullOrWhiteSpace(password))
         {
             errorMessage = "Please enter a password";
+            Logger.LogWarning("Валідація не пройдена: порожній пароль");
             return;
         }
 
         if (password.Length < 6)
         {
             errorMessage = "Password must be at least 6 characters";
+            Logger.LogWarning("Валідація не пройдена: пароль занадто короткий (довжина: {PasswordLength})", password.Length);
             return;
         }
 
         if (password != confirmPassword)
         {
             errorMessage = "Passwords do not match";
+            Logger.LogWarning("Валідація не пройдена: паролі не співпадають");
             return;
         }
 
         if (string.IsNullOrWhiteSpace(group))
         {
             errorMessage = "Please select your group";
+            Logger.LogWarning("Валідація не пройдена: група не вибрана");
             return;
         }
+
+        Logger.LogInformation("Валідація пройдена успішно. Відправка форми реєстрації: Email={Email}, Group={Group}", email, group);
 
         try
         {
@@ -136,6 +147,7 @@
 
             var userId = await UserService.RegisterUserAsync(name, surname, email, password, group);
 
+            Logger.LogInformation("Реєстрація успішна. Перенаправлення на finish-registration. UserId={UserId}", userId);
             Navigation.NavigateTo("/finish-registration");
         }
         catch (Exception ex)
@@ -147,7 +159,7 @@
                 errorMessage += $"\n\nDetails: {ex.InnerException.Message}";
             }
 
-            Console.WriteLine($"Full error: {ex}");
+            Logger.LogError(ex, "Помилка реєстрації на UI: Email={Email}, Group={Group}", email, group);
         }
         finally
         {

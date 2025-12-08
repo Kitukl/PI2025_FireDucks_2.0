@@ -6,6 +6,7 @@
 @inject AuthStateService AuthState
 @inject NavigationManager Navigation
 @inject IJSRuntime JSRuntime
+@inject ILogger<TaskBoard> Logger
 
 <div class="taskboard-container" @onclick="CloseFilterDropdown">
     <div class="taskboard-header">
@@ -513,29 +514,46 @@
 
     protected override async System.Threading.Tasks.Task OnInitializedAsync()
     {
+        Logger.LogInformation("Ініціалізація сторінки Taskboard");
+
         if (!AuthState.IsAuthenticated)
         {
+            Logger.LogWarning("Спроба доступу до Taskboard без автентифікації. Перенаправлення на /login");
             Navigation.NavigateTo("/login");
             return;
         }
 
+        Logger.LogInformation("Користувач автентифікований: UserId={UserId}", AuthState.UserId);
         await LoadTasks();
     }
 
     private async System.Threading.Tasks.Task LoadTasks()
     {
-        if (!AuthState.UserId.HasValue) return;
+        if (!AuthState.UserId.HasValue)
+        {
+            Logger.LogWarning("Спроба завантажити завдання без UserId");
+            return;
+        }
+
+        Logger.LogInformation("Завантаження завдань для користувача: UserId={UserId}", AuthState.UserId.Value);
         errorMessage = "";
 
         try
         {
             isLoading = true;
             tasks = await TaskService.GetUserTasksAsync(AuthState.UserId.Value);
+
+            Logger.LogInformation("Завдання успішно завантажено: {TaskCount} шт, UserId={UserId}",
+                tasks.Count, AuthState.UserId.Value);
+
+            var statusCounts = tasks.GroupBy(t => t.Status)
+                .Select(g => $"{g.Key}: {g.Count()}");
+            Logger.LogInformation("Розподіл по статусам: {StatusDistribution}", string.Join(", ", statusCounts));
         }
         catch (Exception ex)
         {
+            Logger.LogError(ex, "Помилка завантаження завдань: UserId={UserId}", AuthState.UserId.Value);
             errorMessage = $"Failed to load tasks: {ex.Message}";
-            Console.WriteLine($"Error loading tasks: {ex}");
             tasks = new List<TaskItem>();
         }
         finally
@@ -546,14 +564,17 @@
 
     private async System.Threading.Tasks.Task LoadCommentsForTask(int taskId)
     {
+        Logger.LogInformation("Завантаження коментарів для завдання: TaskId={TaskId}", taskId);
+
         try
         {
             taskComments = await TaskService.GetTaskCommentsAsync(taskId);
-            Console.WriteLine($"Loaded {taskComments.Count} comments for task {taskId}");
+            Logger.LogInformation("Завантажено {CommentCount} коментарів для TaskId={TaskId}",
+                taskComments.Count, taskId);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading comments: {ex.Message}");
+            Logger.LogError(ex, "Помилка завантаження коментарів: TaskId={TaskId}", taskId);
             taskComments = new List<CommentItem>();
         }
     }
@@ -587,15 +608,17 @@
 
     private void SetFilter(string subject)
     {
+        Logger.LogInformation("Застосовано фільтр: Subject={Subject}", subject ?? "All");
         filterSubject = subject;
         showFilterDropdown = false;
-        StateHasChanged(); 
+        StateHasChanged();
     }
 
     private void HandleFilterAll() => SetFilter("");
 
     private void OpenCreateTaskModal()
     {
+        Logger.LogInformation("Відкриття модального вікна створення завдання");
         errorMessage = "";
         showCreateModal = true;
         ResetCreateForm();
@@ -618,6 +641,9 @@
 
     private async System.Threading.Tasks.Task OpenTaskDetails(TaskItem task)
     {
+        Logger.LogInformation("Відкриття деталей завдання: TaskId={TaskId}, Name={TaskName}",
+            task.Id, task.Name);
+
         errorMessage = "";
         selectedTask = task;
         selectedTaskStatus = task.Status;
@@ -636,6 +662,11 @@
 
     private void CloseTaskDetails()
     {
+        if (selectedTask != null)
+        {
+            Logger.LogInformation("Закриття деталей завдання: TaskId={TaskId}", selectedTask.Id);
+        }
+
         selectedTask = null;
         taskNotes = "";
         isEditMode = false;
@@ -647,8 +678,19 @@
     private async System.Threading.Tasks.Task CreateNewTask()
     {
         if (string.IsNullOrWhiteSpace(newTaskName) || string.IsNullOrWhiteSpace(newTaskSubject))
+        {
+            Logger.LogWarning("Спроба створити завдання з порожніми полями");
             return;
-        if (!AuthState.UserId.HasValue) return;
+        }
+
+        if (!AuthState.UserId.HasValue)
+        {
+            Logger.LogWarning("Спроба створити завдання без UserId");
+            return;
+        }
+
+        Logger.LogInformation("Створення нового завдання: Name={TaskName}, Subject={Subject}, UserId={UserId}",
+            newTaskName, newTaskSubject, AuthState.UserId.Value);
 
         try
         {
@@ -662,13 +704,17 @@
                 Status.InProgress
             );
 
+            Logger.LogInformation("Завдання успішно створено: Name={TaskName}, UserId={UserId}",
+                newTaskName, AuthState.UserId.Value);
+
             await LoadTasks();
             CloseCreateTaskModal();
         }
         catch (Exception ex)
         {
+            Logger.LogError(ex, "Помилка створення завдання: Name={TaskName}, UserId={UserId}",
+                newTaskName, AuthState.UserId.Value);
             errorMessage = $"Failed to create task: {ex.Message}";
-            Console.WriteLine($"Error creating task: {ex}");
         }
         finally
         {
@@ -679,6 +725,9 @@
     private void ToggleEditMode()
     {
         isEditMode = !isEditMode;
+        Logger.LogInformation("Режим редагування: {EditMode}, TaskId={TaskId}",
+            isEditMode ? "увімкнено" : "вимкнено", selectedTask?.Id);
+
         if (!isEditMode && selectedTask != null)
         {
             editTaskName = selectedTask.Name;
@@ -691,7 +740,13 @@
     private async System.Threading.Tasks.Task SaveTaskChanges()
     {
         if (selectedTask == null)
+        {
+            Logger.LogWarning("Спроба зберегти зміни без вибраного завдання");
             return;
+        }
+
+        Logger.LogInformation("Збереження змін завдання: TaskId={TaskId}, EditMode={EditMode}, StatusChanged={StatusChanged}",
+            selectedTask.Id, isEditMode, selectedTaskStatus != selectedTask.Status);
 
         try
         {
@@ -706,13 +761,15 @@
                 isEditMode ? editTaskDueDate : selectedTask.DueDate
             );
 
+            Logger.LogInformation("Зміни успішно збережено: TaskId={TaskId}", selectedTask.Id);
+
             await LoadTasks();
             CloseTaskDetails();
         }
         catch (Exception ex)
         {
+            Logger.LogError(ex, "Помилка збереження змін: TaskId={TaskId}", selectedTask.Id);
             errorMessage = $"Failed to save changes: {ex.Message}";
-            Console.WriteLine($"Error saving task: {ex}");
         }
         finally
         {
@@ -723,23 +780,25 @@
     private async System.Threading.Tasks.Task SaveTaskNotes()
     {
         if (selectedTask == null || string.IsNullOrWhiteSpace(taskNotes))
+        {
+            Logger.LogWarning("Спроба зберегти коментар з порожнім текстом");
             return;
+        }
 
         if (!AuthState.UserId.HasValue)
         {
+            Logger.LogWarning("Спроба зберегти коментар без UserId");
             errorMessage = "User not authenticated";
             return;
         }
+
+        Logger.LogInformation("Додавання коментаря: TaskId={TaskId}, UserId={UserId}, CommentLength={Length}",
+            selectedTask.Id, AuthState.UserId.Value, taskNotes.Length);
 
         try
         {
             isLoading = true;
             errorMessage = "";
-
-            Console.WriteLine($"=== SAVING COMMENT ===");
-            Console.WriteLine($"TaskId: {selectedTask.Id}");
-            Console.WriteLine($"UserId: {AuthState.UserId.Value}");
-            Console.WriteLine($"Description: {taskNotes}");
 
             await TaskService.CreateCommentAsync(
                 taskId: selectedTask.Id,
@@ -747,16 +806,17 @@
                 description: taskNotes
             );
 
-            Console.WriteLine("Comment saved successfully");
+            Logger.LogInformation("Коментар успішно збережено: TaskId={TaskId}, UserId={UserId}",
+                selectedTask.Id, AuthState.UserId.Value);
 
             taskNotes = "";
             await LoadCommentsForTask(selectedTask.Id);
         }
         catch (Exception ex)
         {
+            Logger.LogError(ex, "Помилка збереження коментаря: TaskId={TaskId}, UserId={UserId}",
+                selectedTask.Id, AuthState.UserId.Value);
             errorMessage = $"Failed to save comment: {ex.Message}";
-            Console.WriteLine($"Error saving comment: {ex}");
-            Console.WriteLine($"Stack trace: {ex.StackTrace}");
         }
         finally
         {
@@ -767,19 +827,28 @@
     private async System.Threading.Tasks.Task DeleteTask()
     {
         if (selectedTask == null)
+        {
+            Logger.LogWarning("Спроба видалити завдання без вибраного завдання");
             return;
+        }
+
+        Logger.LogInformation("Видалення завдання: TaskId={TaskId}, Name={TaskName}",
+            selectedTask.Id, selectedTask.Name);
 
         try
         {
             isLoading = true;
             await TaskService.DeleteTaskAsync(selectedTask.Id);
+
+            Logger.LogInformation("Завдання успішно видалено: TaskId={TaskId}", selectedTask.Id);
+
             await LoadTasks();
             CloseTaskDetails();
         }
         catch (Exception ex)
         {
+            Logger.LogError(ex, "Помилка видалення завдання: TaskId={TaskId}", selectedTask.Id);
             errorMessage = $"Failed to delete task: {ex.Message}";
-            Console.WriteLine($"Error deleting task: {ex}");
         }
         finally
         {
@@ -789,12 +858,14 @@
 
     private void StartEditComment(CommentItem comment)
     {
+        Logger.LogInformation("Початок редагування коментаря: CommentId={CommentId}", comment.Id);
         editingCommentId = comment.Id;
         editingCommentText = comment.Description;
     }
 
     private void CancelEditComment()
     {
+        Logger.LogInformation("Скасування редагування коментаря: CommentId={CommentId}", editingCommentId);
         editingCommentId = null;
         editingCommentText = "";
     }
@@ -802,7 +873,12 @@
     private async System.Threading.Tasks.Task SaveEditComment()
     {
         if (editingCommentId == null || string.IsNullOrWhiteSpace(editingCommentText))
+        {
+            Logger.LogWarning("Спроба зберегти коментар з порожнім текстом");
             return;
+        }
+
+        Logger.LogInformation("Збереження змін коментаря: CommentId={CommentId}", editingCommentId.Value);
 
         try
         {
@@ -810,6 +886,8 @@
             errorMessage = "";
 
             await TaskService.UpdateCommentAsync(editingCommentId.Value, editingCommentText);
+
+            Logger.LogInformation("Коментар успішно оновлено: CommentId={CommentId}", editingCommentId.Value);
 
             editingCommentId = null;
             editingCommentText = "";
@@ -821,8 +899,8 @@
         }
         catch (Exception ex)
         {
+            Logger.LogError(ex, "Помилка оновлення коментаря: CommentId={CommentId}", editingCommentId.Value);
             errorMessage = $"Failed to update comment: {ex.Message}";
-            Console.WriteLine($"Error updating comment: {ex}");
         }
         finally
         {
@@ -832,8 +910,13 @@
 
     private async System.Threading.Tasks.Task DeleteComment(int commentId)
     {
+        Logger.LogInformation("Запит на видалення коментаря: CommentId={CommentId}", commentId);
+
         if (!await ConfirmDelete())
+        {
+            Logger.LogInformation("Видалення коментаря скасовано користувачем: CommentId={CommentId}", commentId);
             return;
+        }
 
         try
         {
@@ -842,6 +925,8 @@
 
             await TaskService.DeleteCommentAsync(commentId);
 
+            Logger.LogInformation("Коментар успішно видалено: CommentId={CommentId}", commentId);
+
             if (selectedTask != null)
             {
                 await LoadCommentsForTask(selectedTask.Id);
@@ -849,8 +934,8 @@
         }
         catch (Exception ex)
         {
+            Logger.LogError(ex, "Помилка видалення коментаря: CommentId={CommentId}", commentId);
             errorMessage = $"Failed to delete comment: {ex.Message}";
-            Console.WriteLine($"Error deleting comment: {ex}");
         }
         finally
         {

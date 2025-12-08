@@ -10,6 +10,7 @@
 @inject IJSRuntime JSRuntime
 @inject AuthStateService AuthState
 @inject NavigationManager Navigation
+@inject ILogger<Storage> Logger
 
 <div class="storage-container" @onclick="CloseFilterDropdown">
     <div class="storage-header" @onclick:stopPropagation="true">
@@ -535,12 +536,16 @@
 
     protected override async Task OnInitializedAsync()
     {
+        Logger.LogInformation("Ініціалізація сторінки Storage");
+
         if (!AuthState.IsAuthenticated || !AuthState.UserId.HasValue)
         {
+            Logger.LogWarning("Спроба доступу до Storage без автентифікації. Перенаправлення на /login");
             Navigation.NavigateTo("/login");
             return;
         }
 
+        Logger.LogInformation("Користувач автентифікований: UserId={UserId}", AuthState.UserId.Value);
         await LoadStorageItems();
     }
 
@@ -549,8 +554,12 @@
         if (!AuthState.UserId.HasValue)
         {
             errorMessage = "User not authenticated";
+            Logger.LogWarning("Спроба завантажити Storage без UserId");
             return;
         }
+
+        Logger.LogInformation("Завантаження елементів Storage: UserId={UserId}, Path={Path}",
+            AuthState.UserId.Value, currentPath ?? "Root");
 
         isLoading = true;
         errorMessage = "";
@@ -570,10 +579,14 @@
             {
                 files = userFiles;
             }
+
+            Logger.LogInformation("Storage завантажено: {FolderCount} папок, {FileCount} файлів. UserId={UserId}, Path={Path}",
+                folders.Count, files.Count, AuthState.UserId.Value, currentPath ?? "Root");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error loading storage: {ex.Message}");
+            Logger.LogError(ex, "Помилка завантаження Storage: UserId={UserId}, Path={Path}",
+                AuthState.UserId.Value, currentPath ?? "Root");
             errorMessage = "Failed to load files. Please try again.";
         }
         finally
@@ -585,6 +598,8 @@
 
     private async Task NavigateToPath(string folderName)
     {
+        var previousPath = currentPath;
+
         if (string.IsNullOrEmpty(folderName))
         {
             currentPath = "";
@@ -596,11 +611,15 @@
                 : Path.Combine(currentPath, folderName);
         }
 
+        Logger.LogInformation("Навігація до папки: {PreviousPath} -> {NewPath}, UserId={UserId}",
+            previousPath ?? "Root", currentPath ?? "Root", AuthState.UserId);
+
         await LoadStorageItems();
     }
 
     private void ShowCreateFolderDialog()
     {
+        Logger.LogInformation("Відкриття діалогу створення папки: Path={Path}", currentPath ?? "Root");
         showCreateFolderDialog = true;
         newFolderName = "";
     }
@@ -627,8 +646,12 @@
         if (!AuthState.UserId.HasValue)
         {
             errorMessage = "User not authenticated";
+            Logger.LogWarning("Спроба створити папку без автентифікації");
             return;
         }
+
+        Logger.LogInformation("Створення папки: Name={FolderName}, Path={Path}, UserId={UserId}",
+            newFolderName, currentPath ?? "Root", AuthState.UserId.Value);
 
         try
         {
@@ -637,6 +660,9 @@
                 : Path.Combine(currentPath, newFolderName);
 
             await Mediator.Send(new FolderCreateCommand(AuthState.UserId.Value, folderPath));
+
+            Logger.LogInformation("Папка успішно створена: {FolderPath}, UserId={UserId}",
+                folderPath, AuthState.UserId.Value);
 
             successMessage = $"Folder '{newFolderName}' created successfully!";
             CloseCreateFolderDialog();
@@ -651,7 +677,8 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error creating folder: {ex.Message}");
+            Logger.LogError(ex, "Помилка створення папки: Name={FolderName}, Path={Path}, UserId={UserId}",
+                newFolderName, currentPath ?? "Root", AuthState.UserId.Value);
             errorMessage = $"Failed to create folder '{newFolderName}'";
             CloseCreateFolderDialog();
         }
@@ -662,11 +689,19 @@
         if (!AuthState.UserId.HasValue)
         {
             errorMessage = "User not authenticated";
+            Logger.LogWarning("Спроба видалити папку без автентифікації");
             return;
         }
 
+        Logger.LogInformation("Запит на видалення папки: {FolderName}, Path={Path}, UserId={UserId}",
+            folderName, currentPath ?? "Root", AuthState.UserId.Value);
+
         var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete the folder '{folderName}' and all its contents?");
-        if (!confirmed) return;
+        if (!confirmed)
+        {
+            Logger.LogInformation("Видалення папки скасовано користувачем: {FolderName}", folderName);
+            return;
+        }
 
         try
         {
@@ -675,6 +710,9 @@
                 : Path.Combine(currentPath, folderName);
 
             await Mediator.Send(new FolderDeleteCommand(AuthState.UserId.Value, folderPath));
+
+            Logger.LogInformation("Папка успішно видалена: {FolderPath}, UserId={UserId}",
+                folderPath, AuthState.UserId.Value);
 
             successMessage = $"Folder '{folderName}' deleted successfully!";
             await LoadStorageItems();
@@ -688,7 +726,8 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error deleting folder: {ex.Message}");
+            Logger.LogError(ex, "Помилка видалення папки: {FolderName}, Path={Path}, UserId={UserId}",
+                folderName, currentPath ?? "Root", AuthState.UserId.Value);
             errorMessage = $"Failed to delete folder '{folderName}'";
         }
     }
@@ -727,8 +766,13 @@
         if (!AuthState.UserId.HasValue)
         {
             errorMessage = "User not authenticated";
+            Logger.LogWarning("Спроба завантажити файли без автентифікації");
             return;
         }
+
+        var fileCount = e.FileCount;
+        Logger.LogInformation("Початок завантаження файлів: Count={FileCount}, Path={Path}, UserId={UserId}",
+            fileCount, currentPath ?? "Root", AuthState.UserId.Value);
 
         isLoading = true;
         errorMessage = "";
@@ -742,22 +786,32 @@
             {
                 try
                 {
+                    Logger.LogInformation("Завантаження файлу: {FileName}, Size={FileSize} bytes",
+                        file.Name, file.Size);
+
                     using var ms = new MemoryStream();
                     await file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024).CopyToAsync(ms);
                     var fileData = ms.ToArray();
 
                     await Mediator.Send(new FileCreateCommand(AuthState.UserId.Value, currentPath, fileData, file.Name));
                     uploadedCount++;
+
+                    Logger.LogInformation("Файл успішно завантажено: {FileName}, UserId={UserId}",
+                        file.Name, AuthState.UserId.Value);
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine($"Error uploading {file.Name}: {ex.Message}");
+                    Logger.LogError(ex, "Помилка завантаження файлу: {FileName}, UserId={UserId}",
+                        file.Name, AuthState.UserId.Value);
                     errorMessage = $"Failed to upload {file.Name}";
                 }
             }
 
             if (uploadedCount > 0)
             {
+                Logger.LogInformation("Завантаження завершено: {UploadedCount}/{TotalCount} файлів успішно, UserId={UserId}",
+                    uploadedCount, fileCount, AuthState.UserId.Value);
+
                 successMessage = $"{uploadedCount} file(s) uploaded successfully!";
                 await LoadStorageItems();
 
@@ -771,7 +825,7 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error in file upload: {ex.Message}");
+            Logger.LogError(ex, "Критична помилка завантаження файлів: UserId={UserId}", AuthState.UserId.Value);
             errorMessage = "File upload failed. Please try again.";
         }
         finally
@@ -786,19 +840,28 @@
         if (!AuthState.UserId.HasValue)
         {
             errorMessage = "User not authenticated";
+            Logger.LogWarning("Спроба видалити файл без автентифікації");
             return;
         }
 
         if (systemFiles.Contains(fileName))
         {
+            Logger.LogWarning("Спроба видалити системний файл: {FileName}", fileName);
             errorMessage = "System files cannot be deleted";
             await Task.Delay(3000);
             errorMessage = "";
             return;
         }
 
+        Logger.LogInformation("Запит на видалення файлу: {FileName}, Path={Path}, UserId={UserId}",
+            fileName, currentPath ?? "Root", AuthState.UserId.Value);
+
         var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete '{fileName}'?");
-        if (!confirmed) return;
+        if (!confirmed)
+        {
+            Logger.LogInformation("Видалення файлу скасовано користувачем: {FileName}", fileName);
+            return;
+        }
 
         try
         {
@@ -807,6 +870,10 @@
                 : Path.Combine(currentPath, fileName);
 
             await Mediator.Send(new FileDeleteCommand(AuthState.UserId.Value, filePath));
+
+            Logger.LogInformation("Файл успішно видалено: {FilePath}, UserId={UserId}",
+                filePath, AuthState.UserId.Value);
+
             successMessage = $"File '{fileName}' deleted successfully!";
             await LoadStorageItems();
 
@@ -819,7 +886,8 @@
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Error deleting file: {ex.Message}");
+            Logger.LogError(ex, "Помилка видалення файлу: {FileName}, Path={Path}, UserId={UserId}",
+                fileName, currentPath ?? "Root", AuthState.UserId.Value);
             errorMessage = $"Failed to delete {fileName}";
         }
     }
@@ -827,6 +895,7 @@
     private void SelectItem(StorageItem item)
     {
         selectedItem = item;
+        Logger.LogDebug("Вибрано файл: {FileName}", item.Name);
     }
 
     private void ToggleFilterDropdown()
@@ -841,6 +910,7 @@
 
     private void SetFilter(string type)
     {
+        Logger.LogInformation("Застосовано фільтр: {FilterType}", string.IsNullOrEmpty(type) ? "All Types" : type);
         filterType = type;
         showFilterDropdown = false;
     }

@@ -1,4 +1,5 @@
 ﻿using MediatR;
+using Microsoft.Extensions.Logging;
 using StudyHub.BLL.Commands.Comments.Create;
 using StudyHub.BLL.Commands.Comments.Delete;
 using StudyHub.BLL.Commands.Comments.Update;
@@ -37,98 +38,247 @@ namespace StudyHub.BLL.Services
     public class TaskService : ITaskService
     {
         private readonly IMediator _mediator;
+        private readonly ILogger<TaskService> _logger;
 
-        public TaskService(IMediator mediator)
+        // ✅ ВАЖЛИВО: Конструктор з ILogger
+        public TaskService(IMediator mediator, ILogger<TaskService> logger)
         {
             _mediator = mediator;
+            _logger = logger;
         }
 
         public async System.Threading.Tasks.Task<List<TaskItem>> GetUserTasksAsync(int userId)
         {
-            var query = new GetUserTasksQuery(userId);
-            return await _mediator.Send(query);
+            _logger.LogInformation("Отримання завдань користувача: UserId={UserId}", userId);
+
+            try
+            {
+                var query = new GetUserTasksQuery(userId);
+                var tasks = await _mediator.Send(query);
+
+                _logger.LogInformation("Отримано {TaskCount} завдань для користувача: UserId={UserId}",
+                    tasks.Count, userId);
+
+                return tasks;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Помилка при отриманні завдань користувача: UserId={UserId}", userId);
+                throw;
+            }
         }
 
         public async System.Threading.Tasks.Task<int> CreateTaskAsync(int userId, string title, string description, string subject, DateTime? deadline, Status status)
         {
-            var command = new CreateTaskCommand(
-                userId,
-                title,
-                description,
-                deadline ?? DateTime.Now.AddDays(7),
-                status
-            );
-            return await _mediator.Send(command);
+            _logger.LogInformation("Створення завдання: UserId={UserId}, Title={Title}, Status={Status}, Deadline={Deadline}",
+                userId, title, status, deadline);
+
+            try
+            {
+                var command = new CreateTaskCommand(
+                    userId,
+                    title,
+                    description,
+                    deadline ?? DateTime.Now.AddDays(7),
+                    status
+                );
+
+                var taskId = await _mediator.Send(command);
+
+                _logger.LogInformation("Завдання успішно створено: TaskId={TaskId}, UserId={UserId}",
+                    taskId, userId);
+
+                return taskId;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Помилка при створенні завдання: UserId={UserId}, Title={Title}",
+                    userId, title);
+                throw;
+            }
         }
 
         public async System.Threading.Tasks.Task<bool> UpdateTaskAsync(int taskId, string title, string description, string subject, string status, DateTime? deadline)
         {
-            var taskEntity = new TaskEntity
-            {
-                Id = taskId,
-                Title = title,
-                Description = description,
-                Deadline = deadline ?? DateTime.Now.AddDays(7),
-                Status = MapStringToStatus(status)
-            };
+            _logger.LogInformation("Оновлення завдання: TaskId={TaskId}, Title={Title}, Status={Status}",
+                taskId, title, status);
 
-            var command = new StudyHub.BLL.Commands.Task.Update.UpdateCommand(taskEntity);
-            var resultId = await _mediator.Send(command);
-            return resultId > 0;
+            try
+            {
+                var taskEntity = new TaskEntity
+                {
+                    Id = taskId,
+                    Title = title,
+                    Description = description,
+                    Deadline = deadline ?? DateTime.Now.AddDays(7),
+                    Status = MapStringToStatus(status)
+                };
+
+                var command = new StudyHub.BLL.Commands.Task.Update.UpdateCommand(taskEntity);
+                var resultId = await _mediator.Send(command);
+
+                if (resultId > 0)
+                {
+                    _logger.LogInformation("Завдання успішно оновлено: TaskId={TaskId}", taskId);
+                }
+                else
+                {
+                    _logger.LogWarning("Не вдалося оновити завдання: TaskId={TaskId}", taskId);
+                }
+
+                return resultId > 0;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Помилка при оновленні завдання: TaskId={TaskId}", taskId);
+                throw;
+            }
         }
 
         public async System.Threading.Tasks.Task<bool> DeleteTaskAsync(int taskId)
         {
-            var command = new DeleteTaskCommand(taskId);
-            var resultId = await _mediator.Send(command);
-            return resultId > 0;
+            _logger.LogInformation("Видалення завдання: TaskId={TaskId}", taskId);
+
+            try
+            {
+                var command = new DeleteTaskCommand(taskId);
+                var resultId = await _mediator.Send(command);
+
+                if (resultId > 0)
+                {
+                    _logger.LogInformation("Завдання успішно видалено: TaskId={TaskId}", taskId);
+                }
+                else
+                {
+                    _logger.LogWarning("Не вдалося видалити завдання: TaskId={TaskId}", taskId);
+                }
+
+                return resultId > 0;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Помилка при видаленні завдання: TaskId={TaskId}", taskId);
+                throw;
+            }
         }
 
         public async System.Threading.Tasks.Task<int> CreateCommentAsync(int taskId, int userId, string description)
         {
-            var command = new CreateCommentCommand(description, taskId, userId);
-            return await _mediator.Send(command);
+            _logger.LogInformation("Створення коментаря: TaskId={TaskId}, UserId={UserId}",
+                taskId, userId);
+
+            try
+            {
+                var command = new CreateCommentCommand(description, taskId, userId);
+                var commentId = await _mediator.Send(command);
+
+                _logger.LogInformation("Коментар успішно створено: CommentId={CommentId}, TaskId={TaskId}",
+                    commentId, taskId);
+
+                return commentId;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Помилка при створенні коментаря: TaskId={TaskId}, UserId={UserId}",
+                    taskId, userId);
+                throw;
+            }
         }
 
         public async System.Threading.Tasks.Task<List<CommentItem>> GetTaskCommentsAsync(int taskId)
         {
-            var query = new GetTaskCommentsQuery(taskId);
-            var comments = await _mediator.Send(query);
+            _logger.LogInformation("Отримання коментарів завдання: TaskId={TaskId}", taskId);
 
-            return comments.Select(c => new CommentItem
+            try
             {
-                Id = c.Id,
-                Description = c.Description,
-                CreationDate = c.CreationDate,
-                TaskId = c.TaskId,
-                UserId = c.UserId,
-                AuthorName = c.User != null ? $"{c.User.Name} {c.User.Surname}" : "Unknown User"
-            }).ToList();
+                var query = new GetTaskCommentsQuery(taskId);
+                var comments = await _mediator.Send(query);
+
+                var commentItems = comments.Select(c => new CommentItem
+                {
+                    Id = c.Id,
+                    Description = c.Description,
+                    CreationDate = c.CreationDate,
+                    TaskId = c.TaskId,
+                    UserId = c.UserId,
+                    AuthorName = c.User != null ? $"{c.User.Name} {c.User.Surname}" : "Unknown User"
+                }).ToList();
+
+                _logger.LogInformation("Отримано {CommentCount} коментарів для завдання: TaskId={TaskId}",
+                    commentItems.Count, taskId);
+
+                return commentItems;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Помилка при отриманні коментарів: TaskId={TaskId}", taskId);
+                throw;
+            }
         }
 
         public async System.Threading.Tasks.Task<bool> UpdateCommentAsync(int commentId, string description)
         {
-            var comment = new Comments
-            {
-                Id = commentId,
-                Description = description
-            };
+            _logger.LogInformation("Оновлення коментаря: CommentId={CommentId}", commentId);
 
-            var command = new UpdateCommentCommand(comment);
-            var resultId = await _mediator.Send(command);
-            return resultId > 0;
+            try
+            {
+                var comment = new Comments
+                {
+                    Id = commentId,
+                    Description = description
+                };
+
+                var command = new UpdateCommentCommand(comment);
+                var resultId = await _mediator.Send(command);
+
+                if (resultId > 0)
+                {
+                    _logger.LogInformation("Коментар успішно оновлено: CommentId={CommentId}", commentId);
+                }
+                else
+                {
+                    _logger.LogWarning("Не вдалося оновити коментар: CommentId={CommentId}", commentId);
+                }
+
+                return resultId > 0;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Помилка при оновленні коментаря: CommentId={CommentId}", commentId);
+                throw;
+            }
         }
 
         public async System.Threading.Tasks.Task<bool> DeleteCommentAsync(int commentId)
         {
-            var command = new DeleteCommentCommand(commentId);
-            var resultId = await _mediator.Send(command);
-            return resultId > 0;
+            _logger.LogInformation("Видалення коментаря: CommentId={CommentId}", commentId);
+
+            try
+            {
+                var command = new DeleteCommentCommand(commentId);
+                var resultId = await _mediator.Send(command);
+
+                if (resultId > 0)
+                {
+                    _logger.LogInformation("Коментар успішно видалено: CommentId={CommentId}", commentId);
+                }
+                else
+                {
+                    _logger.LogWarning("Не вдалося видалити коментар: CommentId={CommentId}", commentId);
+                }
+
+                return resultId > 0;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Помилка при видаленні коментаря: CommentId={CommentId}", commentId);
+                throw;
+            }
         }
 
         private Status MapStringToStatus(string status)
         {
-            return status.ToLower() switch
+            var mappedStatus = status.ToLower() switch
             {
                 "to do" => Status.ToDo,
                 "in progress" => Status.InProgress,
@@ -136,6 +286,10 @@ namespace StudyHub.BLL.Services
                 "done" => Status.Done,
                 _ => Status.InProgress
             };
+
+            _logger.LogDebug("Маппінг статусу: '{StatusString}' -> {MappedStatus}", status, mappedStatus);
+
+            return mappedStatus;
         }
     }
 }

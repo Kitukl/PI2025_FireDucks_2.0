@@ -2,6 +2,7 @@
 @inject NavigationManager Navigation
 @inject AuthStateService AuthState
 @inject IUserService UserService
+@inject ILogger<Profile> Logger
 @implements IDisposable
 
 <div class="profile-container">
@@ -104,6 +105,13 @@
                 <button class="help-btn">?</button>
             </div>
 
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="error-message">
+                    ⚠️ @errorMessage
+                </div>
+            }
+
             <div class="form-group">
                 <label>Type:</label>
                 <select @bind="contactType" class="form-select">
@@ -153,7 +161,16 @@
             </div>
 
             <div class="form-actions">
-                <button class="send-btn" @onclick="SendContactForm">Send</button>
+                <button class="send-btn" @onclick="SendContactForm" disabled="@isLoading">
+                    @if (isLoading)
+                    {
+                        <span>Sending...</span>
+                    }
+                    else
+                    {
+                        <span>Send</span>
+                    }
+                </button>
             </div>
 
             @if (showSuccessMessage)
@@ -166,27 +183,67 @@
     </div>
 </div>
 
+<style>
+    .error-message {
+        padding: 12px;
+        margin-bottom: 15px;
+        background: #fee;
+        border: 1px solid #fcc;
+        border-radius: 6px;
+        color: #c33;
+        font-size: 14px;
+    }
+
+    .success-message {
+        padding: 12px;
+        margin-top: 15px;
+        background: #efe;
+        border: 1px solid #cfc;
+        border-radius: 6px;
+        color: #3c3;
+        font-size: 14px;
+    }
+
+    .validation-message {
+        display: block;
+        color: #c33;
+        font-size: 12px;
+        margin-top: 5px;
+    }
+
+    .input-error {
+        border-color: #c33 !important;
+    }
+</style>
+
 @code {
     private string contactType = "Request";
     private string contactCategory = "";
     private string contactSubject = "";
     private string contactDescription = "";
-    private string selectedGroup = ""; 
+    private string selectedGroup = "";
 
     private bool isTelegramConnected = false;
     private bool isNotificationsOn = false;
     private bool showQRPopup = false;
     private bool showValidation = false;
     private bool showSuccessMessage = false;
-
+    private bool isLoading = false;
+    private string errorMessage = "";
 
     protected override void OnInitialized()
     {
+        Logger.LogInformation("Ініціалізація сторінки профілю");
+
         if (!AuthState.IsAuthenticated)
         {
+            Logger.LogWarning("Спроба доступу до профілю без автентифікації. Перенаправлення на /login");
             Navigation.NavigateTo("/login");
             return;
         }
+
+        Logger.LogInformation("Користувач на сторінці профілю: UserId={UserId}, Name={Name} {Surname}, Email={Email}, Group={Group}",
+            AuthState.UserId, AuthState.UserName, AuthState.UserSurname, AuthState.UserEmail, AuthState.UserGroupName);
 
         selectedGroup = AuthState.UserGroupName ?? "PMI-31";
 
@@ -195,20 +252,29 @@
 
     public void Dispose()
     {
+        Logger.LogDebug("Dispose сторінки профілю");
+
         if (AuthState != null)
         {
             AuthState.OnAuthStateChanged -= StateHasChanged;
         }
     }
 
+    private void OnGroupChanged()
+    {
+        Logger.LogInformation("Зміна групи користувача: UserId={UserId}, OldGroup={OldGroup}, NewGroup={NewGroup}",
+            AuthState.UserId, AuthState.UserGroupName, selectedGroup);
+    }
 
     private void ShowQRPopup()
     {
+        Logger.LogDebug("Відображення QR коду для Telegram");
         showQRPopup = true;
     }
 
     private void HideQRPopup()
     {
+        Logger.LogDebug("Приховування QR коду");
         showQRPopup = false;
     }
 
@@ -217,40 +283,99 @@
         if (isTelegramConnected)
         {
             isNotificationsOn = !isNotificationsOn;
-            // TODO: Відправити запит на бекенд для збереження стану нотифікацій
+            Logger.LogInformation("Зміна налаштувань сповіщень: UserId={UserId}, Enabled={Enabled}",
+                AuthState.UserId, isNotificationsOn);
+        }
+        else
+        {
+            Logger.LogWarning("Спроба увімкнути сповіщення без підключення Telegram: UserId={UserId}",
+                AuthState.UserId);
         }
     }
 
     private async Task SendContactForm()
     {
+        Logger.LogInformation("Початок відправки контактної форми: UserId={UserId}, Type={Type}, Category={Category}",
+            AuthState.UserId, contactType, contactCategory);
+
         showValidation = true;
         showSuccessMessage = false;
+        errorMessage = "";
 
         if (string.IsNullOrEmpty(contactCategory) ||
             string.IsNullOrWhiteSpace(contactSubject) ||
             string.IsNullOrWhiteSpace(contactDescription))
         {
+            Logger.LogWarning("Валідація контактної форми не пройдена: Category={CategoryEmpty}, Subject={SubjectEmpty}, Description={DescriptionEmpty}, UserId={UserId}",
+                string.IsNullOrEmpty(contactCategory), string.IsNullOrWhiteSpace(contactSubject),
+                string.IsNullOrWhiteSpace(contactDescription), AuthState.UserId);
             return;
         }
 
-        // TODO: Тут повинна бути логіка відправки контактної форми на бекенд
-        // (наприклад, через IUserService або окремий SupportService)
+        if (!AuthState.UserId.HasValue)
+        {
+            Logger.LogWarning("Спроба відправити форму без UserId");
+            errorMessage = "User not authenticated";
+            return;
+        }
 
-        showSuccessMessage = true;
+        try
+        {
+            isLoading = true;
 
-        contactType = "Request";
-        contactCategory = "";
-        contactSubject = "";
-        contactDescription = "";
-        showValidation = false;
+            Logger.LogInformation("Відправка контактної форми: UserId={UserId}, Type={Type}, Category={Category}, Subject={Subject}",
+                AuthState.UserId.Value, contactType, contactCategory, contactSubject);
 
-        await Task.Delay(3000);
-        showSuccessMessage = false;
+            await UserService.SendContactFormAsync(
+                contactType,
+                contactCategory,
+                contactSubject,
+                contactDescription,
+                AuthState.UserId.Value
+            );
+
+            Logger.LogInformation("Контактна форма успішно відправлена: UserId={UserId}, Type={Type}, Category={Category}",
+                AuthState.UserId.Value, contactType, contactCategory);
+
+            showSuccessMessage = true;
+
+            var previousType = contactType;
+            var previousCategory = contactCategory;
+            contactType = "Request";
+            contactCategory = "";
+            contactSubject = "";
+            contactDescription = "";
+            showValidation = false;
+
+            Logger.LogInformation("Форма очищена після успішної відправки: UserId={UserId}", AuthState.UserId.Value);
+
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(3000);
+                showSuccessMessage = false;
+                await InvokeAsync(StateHasChanged);
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Помилка відправки контактної форми: UserId={UserId}, Type={Type}, Category={Category}",
+                AuthState.UserId.Value, contactType, contactCategory);
+            errorMessage = $"Failed to send request: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
     }
 
     private void LogOut()
     {
+        Logger.LogInformation("Вихід користувача з системи: UserId={UserId}, Name={Name}",
+            AuthState.UserId, AuthState.UserName);
+
         AuthState.Logout();
+
+        Logger.LogInformation("Користувач успішно вийшов. Перенаправлення на /login");
         Navigation.NavigateTo("/login");
     }
 }

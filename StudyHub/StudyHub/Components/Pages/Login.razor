@@ -3,6 +3,7 @@
 @inject NavigationManager Navigation
 @inject IUserService UserService
 @inject AuthStateService AuthState
+@inject ILogger<Login> Logger
 
 <div class="auth-container">
     <div class="auth-logo">
@@ -13,9 +14,7 @@
         <div class="auth-mascot">
             <img src="images/fireduck.png" alt="FireDucks" />
         </div>
-
         <h2 class="auth-title">Log In</h2>
-
         <div class="auth-form">
             @if (showError)
             {
@@ -23,7 +22,6 @@
                     @errorMessage
                 </div>
             }
-
             <div class="form-group">
                 <label>e-mail:</label>
                 <input type="email" @bind="email" class="form-input" />
@@ -61,6 +59,8 @@
 
     private async Task HandleLogin()
     {
+        Logger.LogInformation("Початок процесу входу на UI");
+
         showError = false;
         errorMessage = "";
 
@@ -68,6 +68,7 @@
         {
             showError = true;
             errorMessage = "Please enter your email";
+            Logger.LogWarning("Валідація входу не пройдена: порожній email");
             return;
         }
 
@@ -75,8 +76,11 @@
         {
             showError = true;
             errorMessage = "Please enter your password";
+            Logger.LogWarning("Валідація входу не пройдена: порожній пароль");
             return;
         }
+
+        Logger.LogInformation("Валідація входу пройдена. Спроба входу: Email={Email}", email);
 
         try
         {
@@ -84,20 +88,34 @@
 
             var response = await UserService.LoginAsync(email, password);
 
-            AuthState.SetAuthenticatedUser(response.Id, response.Name, response.Surname, response.Email, response.GroupName);
+            if (response != null && response.Id > 0)
+            {
+                AuthState.SetAuthenticatedUser(response.Id, response.Name, response.Surname, response.Email, response.GroupName);
 
-            Navigation.NavigateTo("/home");
+                Logger.LogInformation("Вхід успішний. Перенаправлення на /home. UserId={UserId}, Email={Email}",
+                    response.Id, email);
+
+                Navigation.NavigateTo("/home");
+            }
+            else
+            {
+                showError = true;
+                errorMessage = "Invalid email or password";
+                Logger.LogWarning("Невдалий вхід: неправильні дані. Email={Email}", email);
+            }
         }
         catch (InvalidOperationException ex)
         {
             showError = true;
             errorMessage = ex.Message;
+            Logger.LogWarning(ex, "InvalidOperationException при вході: Email={Email}, Message={Message}",
+                email, ex.Message);
         }
         catch (Exception ex)
         {
             showError = true;
             errorMessage = "An error occurred during login. Please try again.";
-            Console.WriteLine($"Login error: {ex}");
+            Logger.LogError(ex, "Помилка входу на UI: Email={Email}", email);
         }
         finally
         {
