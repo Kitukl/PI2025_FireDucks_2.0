@@ -22,7 +22,7 @@ public class TaskRepository : IBaseRepository<DAL.Entities.Task>
 
     public virtual async Task<List<DAL.Entities.Task>> GetAll()
     {
-        return await _context.Tasks.ToListAsync();
+        return await _context.Tasks.Include(t => t.User).ToListAsync();
     }
 
     public virtual async Task<int> UpdateAsync(DAL.Entities.Task item)
@@ -56,6 +56,7 @@ public class TaskRepository : IBaseRepository<DAL.Entities.Task>
     public virtual async Task<DAL.Entities.Task> GetById(int id)
     {
         var task = await _context.Tasks
+            .Include(u => u.User)
             .FirstOrDefaultAsync(u => u.Id == id);
 
         return task ?? throw new Exception("Task not found");
@@ -65,6 +66,7 @@ public class TaskRepository : IBaseRepository<DAL.Entities.Task>
     {
         return await _context.Tasks
             .Where(t => t.User.Id == userId)
+            .Include(t => t.User)
             .ToListAsync();
     }
 }
