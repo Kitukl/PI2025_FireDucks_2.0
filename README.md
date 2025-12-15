@@ -1,8 +1,17 @@
 # StudyHub project
 
 ## Description
+Innovative Educational Platform: Synergy of Individual Learning and Team Interaction
 
-This project is a platform for students that combines individual work and team interaction. Each user can have their own space for tasks, as well as join teams where a shared Kanban board and material storage are available. Additionally, the system supports group schedules that can be synchronized with Google Calendar to conveniently track classes or deadlines. Communication is built through notifications: invitations to groups, reminders about deadlines, or confirmations of completed tasks are sent to the application and duplicated in the Telegram bot. To motivate users, a points system has been implemented: completed tasks and praise from other participants bring additional bonuses. This creates an atmosphere of healthy competition and helps to maintain a high level of engagement in the team's work.
+This innovative project is a comprehensive digital platform specifically designed to meet the needs of modern students, aiming to organically combine self-directed work with effective team interaction.
+
+Personalized Workspace: Every registered user is granted their own, fully adaptive digital space, intended for managing individual learning tasks, projects, and personal notes. This acts as their personal productivity hub, where they can track their progress and organize their study process.
+
+Group Dynamics and Organization: A key feature of the platform is the ability to easily join or create study groups. Within these groups, students gain shared access to a dynamic group schedule (e.g., timetables for lectures, seminars, joint meetings, and team submission deadlines), ensuring complete transparency and coordination in collective work.
+
+Centralized Communication System (Email Notifications): The foundation of effective platform communication is a reliable notification system integrated directly with the user's email. Instead of cluttering the interface, all critical events and actions are immediately sent to the user's email.
+
+This architecture ensures that no critical information is missed, minimizing chaos and maximizing learning productivity.
 
 ## Application type
 
