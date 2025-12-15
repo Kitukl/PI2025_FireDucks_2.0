@@ -19,10 +19,6 @@
 <div class="schedule-container">
     <div class="schedule-header">
         <div class="schedule-header-left">
-            <select class="week-select">
-                <option value="current">Цей тиждень</option>
-                <option value="next">Наступний тиждень</option>
-            </select>
 
             <select class="group-select" value="@currentGroupName" @onchange="OnGroupChanged">
                 @if (AvailableGroups == null || !AvailableGroups.Any())
@@ -84,12 +80,12 @@
                                 <td class="lesson-cell">
                                     @if (RenderedSchedule.ContainsKey(day) && RenderedSchedule[day].ContainsKey(slotKey))
                                     {
-                                        foreach (var lesson in RenderedSchedule[day][slotKey])
+                                        foreach (var lesson in GetUniqueLessons(RenderedSchedule[day][slotKey]))
                                         {
                                             var typeClass = GetTypeClass(lesson.Type);
 
                                             <div class="lesson-card @typeClass">
-                                                <div class="lesson-type">@lesson.Type</div>
+                                                <div class="lesson-type">@GetTypeShortLabel(lesson.Type)</div>
                                                 <div class="lesson-subject">@(lesson.Subject?.Name ?? "Без назви")</div>
 
                                                 <div class="lesson-footer">
@@ -154,6 +150,42 @@
                 isLoading = false;
             }
         }
+    }
+
+    private string GetTypeShortLabel(string type)
+    {
+        if (string.IsNullOrEmpty(type)) return "";
+
+        type = type.ToLower();
+        if (type.Contains("лек")) return "Л";
+        if (type.Contains("прак") || type.Contains("лаб")) return "П";
+        if (type.Contains("сем")) return "С";
+
+        return type;
+    }
+
+    private List<Lesson> GetUniqueLessons(List<Lesson> lessons)
+    {
+        if (lessons == null || !lessons.Any())
+            return new List<Lesson>();
+
+        var uniqueLessons = new List<Lesson>();
+
+        foreach (var lesson in lessons)
+        {
+            bool isDuplicate = uniqueLessons.Any(ul =>
+                ul.Subject?.Name == lesson.Subject?.Name &&
+                ul.Type == lesson.Type &&
+                ul.Room == lesson.Room &&
+                ul.Day == lesson.Day);
+
+            if (!isDuplicate)
+            {
+                uniqueLessons.Add(lesson);
+            }
+        }
+
+        return uniqueLessons;
     }
 
 

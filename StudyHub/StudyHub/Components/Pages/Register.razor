@@ -36,14 +36,6 @@
                 <input type="email" @bind="email" class="form-input" />
             </div>
             <div class="form-group">
-                <label>Password:</label>
-                <input type="password" @bind="password" class="form-input" />
-            </div>
-            <div class="form-group">
-                <label>Confirm Password:</label>
-                <input type="password" @bind="confirmPassword" class="form-input" />
-            </div>
-            <div class="form-group">
                 <label>Group:</label>
                 <select @bind="group" class="form-select">
                     <option value="">Choose your group</option>
@@ -108,27 +100,6 @@
         {
             errorMessage = "Please enter your email";
             Logger.LogWarning("Валідація не пройдена: порожній email");
-            return;
-        }
-
-        if (string.IsNullOrWhiteSpace(password))
-        {
-            errorMessage = "Please enter a password";
-            Logger.LogWarning("Валідація не пройдена: порожній пароль");
-            return;
-        }
-
-        if (password.Length < 6)
-        {
-            errorMessage = "Password must be at least 6 characters";
-            Logger.LogWarning("Валідація не пройдена: пароль занадто короткий (довжина: {PasswordLength})", password.Length);
-            return;
-        }
-
-        if (password != confirmPassword)
-        {
-            errorMessage = "Passwords do not match";
-            Logger.LogWarning("Валідація не пройдена: паролі не співпадають");
             return;
         }
 
