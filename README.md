@@ -40,5 +40,4 @@ Scrum, why scrum?
 * Styles: TailwindCSS
 * ORM: Entity Framework Core
 * Database: PostgreSQL
-* Containerization: Docker
 * Version control: Git
