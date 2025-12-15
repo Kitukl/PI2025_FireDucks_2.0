@@ -1,9 +1,8 @@
-using Castle.Core.Smtp;
+
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using StudyHub.BLL.Commands;
-using StudyHub.DAL.Entities;
 using StudyHub.DAL.Repositories;
 using Task = System.Threading.Tasks.Task;
 
@@ -11,22 +10,26 @@ namespace StudyHub.BLL.Workers;
 
 public class DeadlineEmailWorker : BackgroundService
 {
-    private readonly IServiceProvider _services;
     private readonly ILogger<DeadlineEmailWorker> _logger;
+    private readonly IServiceScopeFactory _scopeFactory;
 
     private readonly HashSet<int> _notifiedTaskIds = new();
 
     public DeadlineEmailWorker(
-        IServiceProvider services,
-        ILogger<DeadlineEmailWorker> logger)
+        ILogger<DeadlineEmailWorker> logger,
+        IServiceScopeFactory scopeFactory)
     {
-        _services = services;
         _logger = logger;
+        _scopeFactory = scopeFactory;
+
+        _logger.LogInformation("DeadlineEmailWorker constructed");
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        using var timer = new PeriodicTimer(TimeSpan.FromMinutes(5));
+        _logger.LogInformation("DeadlineEmailWorker started (interval: 4s)");
+
+        using var timer = new PeriodicTimer(TimeSpan.FromSeconds(4));
         await RunOnce(stoppingToken);
 
         while (await timer.WaitForNextTickAsync(stoppingToken))
@@ -39,17 +42,18 @@ public class DeadlineEmailWorker : BackgroundService
     {
         try
         {
-            using var scope = _services.CreateScope();
+            using var scope = _scopeFactory.CreateScope();
 
             var taskRepo = scope.ServiceProvider
                 .GetRequiredService<IBaseRepository<StudyHub.DAL.Entities.Task>>();
 
-            var emailService = scope.ServiceProvider
+            var emailSender = scope.ServiceProvider
                 .GetRequiredService<EmailSender>();
 
             var now = DateTime.Now;
 
             var tasks = await taskRepo.GetAll();
+            _logger.LogInformation("RunOnce: loaded {Count} tasks", tasks.Count);
 
             foreach (var task in tasks)
             {
@@ -69,10 +73,13 @@ public class DeadlineEmailWorker : BackgroundService
 
                 var info = $"{task.Title} — {task.User.DaysForNotification} днів до дедлайну";
 
-                await emailService.Send(
+                _logger.LogInformation("Sending email for Task {Id} to {Email}", task.Id, task.User.Email);
+
+                await emailSender.Send(
                     to: task.User.Email,
                     subject: "Ваше завдання близько до дедлайну!",
-                    info);
+                    messageText: info);
+
                 _notifiedTaskIds.Add(task.Id);
             }
         }

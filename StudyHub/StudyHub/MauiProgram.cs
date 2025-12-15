@@ -1,21 +1,19 @@
-using Castle.Core.Smtp;
+
 using dotenv.net;
-using Microsoft.Extensions.Configuration;
+using MediatR;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using StudyHub.BLL.Interfaces;
 using SendGrid;
+using Serilog;
 using StudyHub.BLL.Commands;
+using StudyHub.BLL.Commands.User.Register;
+using StudyHub.BLL.Interfaces;
 using StudyHub.BLL.Services;
 using StudyHub.BLL.Workers;
 using StudyHub.DAL;
 using StudyHub.DAL.Entities;
 using StudyHub.DAL.Repositories;
-using Task = StudyHub.DAL.Entities.Task;
-using MediatR;
-using StudyHub.BLL.Commands.User.Register;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.EntityFrameworkCore;
-using Serilog;
 
 namespace StudyHub
 {
@@ -25,10 +23,6 @@ namespace StudyHub
         {
             DotEnv.Load();
 
-            var builder = MauiApp.CreateBuilder();
-            builder
-                .UseMauiApp<App>()
-                .ConfigureFonts(fonts =>
             var logDirectory = Path.Combine(FileSystem.AppDataDirectory, "logs");
             Directory.CreateDirectory(logDirectory);
             var logPath = Path.Combine(logDirectory, "studyhub-.txt");
@@ -45,8 +39,6 @@ namespace StudyHub
                     retainedFileCountLimit: 30
                 )
                 .CreateLogger();
-           // System.Diagnostics.Debug.WriteLine($"LOG PATH: {logDirectory}");
-            //Log.Information("Шлях до логів: {LogPath}", logDirectory);
 
             try
             {
@@ -54,6 +46,7 @@ namespace StudyHub
                 Log.Information("Шлях до логів: {LogPath}", logDirectory);
 
                 var builder = MauiApp.CreateBuilder();
+
                 builder
                     .UseMauiApp<App>()
                     .ConfigureFonts(fonts =>
@@ -67,26 +60,11 @@ namespace StudyHub
                     loggingBuilder.AddSerilog(dispose: true);
                 });
 
-                AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
-
                 builder.Services.AddMauiBlazorWebView();
 
-            builder.Services.AddScoped<IBaseRepository<Lecturer>, LecturerRepository>();
-            builder.Services.AddScoped<IBaseRepository<Lesson>, LessonRepository>();
-            builder.Services.AddScoped<IBaseRepository<Subject>, SubjectRepository>();
-            builder.Services.AddScoped<IBaseRepository<Schedule>, ScheduleRepository>();
-            builder.Services.AddScoped<IBaseRepository<User>, UserRepository>();
-            builder.Services.AddScoped<IBaseRepository<Task>, TaskRepository>();
+                AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
-            builder.Services.AddScoped<IBaseRepository<LessonSlots>, LessonSlotsRepository>();
-            
-            builder.Services.AddHostedService<DeadlineEmailWorker>();
-                Log.Information("Реєстрація сервісів...");
-                builder.Services.AddScoped<StudyContext>();
-                builder.Services.AddScoped<UserRepository>();
-                builder.Services.AddScoped<TaskRepository>();
-                builder.Services.AddScoped<CommentsRepository>();
-
+                // Репозиторії (scoped)
                 builder.Services.AddScoped<IBaseRepository<User>, UserRepository>();
                 builder.Services.AddScoped<IBaseRepository<Lecturer>, LecturerRepository>();
                 builder.Services.AddScoped<IBaseRepository<Lesson>, LessonRepository>();
@@ -94,7 +72,15 @@ namespace StudyHub
                 builder.Services.AddScoped<IBaseRepository<Schedule>, ScheduleRepository>();
                 builder.Services.AddScoped<IBaseRepository<LessonSlots>, LessonSlotsRepository>();
                 builder.Services.AddScoped<IBaseRepository<Comments>, CommentsRepository>();
-                builder.Services.AddScoped<IBaseRepository<DAL.Entities.Task>, TaskRepository>();
+                builder.Services.AddScoped<IBaseRepository<StudyHub.DAL.Entities.Task>, TaskRepository>();
+
+                // Сервіси
+                builder.Services.AddScoped<StudyContext>();
+                builder.Services.AddScoped<UserRepository>();
+                builder.Services.AddScoped<TaskRepository>();
+                builder.Services.AddScoped<CommentsRepository>();
+                builder.Services.AddScoped<SupportTicketRepository>();
+                builder.Services.AddScoped<CategoryRepository>();
 
                 builder.Services.AddScoped<IParserRunner, ParserRunner>();
                 builder.Services.AddScoped<IFacultyHelper, AmiFacultyHelper>();
@@ -103,23 +89,23 @@ namespace StudyHub
                 builder.Services.AddScoped<IScheduleDownloaderService, ScheduleDownloaderService>();
                 builder.Services.AddSingleton<AuthStateService>();
 
-                builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(RegisterCommandHandler).Assembly));
-
-                builder.Services.AddScoped<SupportTicketRepository>();
-                builder.Services.AddScoped<CategoryRepository>();
                 builder.Services.AddScoped<IUserService, UserService>();
                 builder.Services.AddScoped<ITaskService, TaskService>();
+                builder.Services.AddScoped<EmailSender>();
 
-            builder.Services.AddScoped<UniversityService>();
+                // SendGrid
+                builder.Services.AddScoped<ISendGridClient>(_ =>
+                    new SendGridClient(""));
 
-            builder.Services.AddScoped<IScheduleDownloaderService, ScheduleDownloaderService>();
-            builder.Services.AddSingleton<ScheduleService>();
-
-            builder.Services.AddScoped<EmailSender>();
-            
-            builder.Services.AddScoped<ISendGridClient>(sg => new SendGridClient(Environment.GetEnvironmentVariable("API_KEY")));
-                builder.Services.AddSingleton<IFileStorageService>(sp =>
+                // Локальне сховище
+                builder.Services.AddSingleton<IFileStorageService>(_ =>
                     new LocalFileStorageService(Path.Combine(Directory.GetCurrentDirectory(), "Storage")));
+
+                builder.Services.AddMediatR(cfg =>
+                    cfg.RegisterServicesFromAssembly(typeof(RegisterCommandHandler).Assembly));
+
+                // Hosted Service
+                builder.Services.AddHostedService<DeadlineEmailWorker>();
 
 #if DEBUG
                 builder.Services.AddBlazorWebViewDeveloperTools();
@@ -128,6 +114,16 @@ namespace StudyHub
                 Log.Information("Сервіси успішно зареєстровано");
 
                 var app = builder.Build();
+
+                // Явний старт Hosted Services
+                System.Threading.Tasks.Task.Run(async () =>
+                {
+                    var hostedServices = app.Services.GetServices<IHostedService>();
+                    foreach (var hosted in hostedServices)
+                    {
+                        await hosted.StartAsync(CancellationToken.None);
+                    }
+                });
 
                 Log.Information("StudyHub застосунок успішно запущено");
 

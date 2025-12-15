@@ -86,7 +86,7 @@ public class EmailSender : IEmailSender
 
     <p style=""color: #6B6B6B; font-size: 12px; text-align: center;"">
         З повагою,<br>
-        Команда CryptoAuth
+        Команда StudyHub
     </p>
 
 </div>";
