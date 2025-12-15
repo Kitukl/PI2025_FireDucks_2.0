@@ -71,7 +71,7 @@ public class DeadlineEmailWorker : BackgroundService
                 if (notifyThreshold < task.Deadline)
                     continue;
 
-                var info = $"{task.Title} — {task.User.DaysForNotification} днів до дедлайну";
+                var info = $"{task.Title} — {(task.Deadline - task.CreationDate).TotalDays} днів до дедлайну";
 
                 _logger.LogInformation("Sending email for Task {Id} to {Email}", task.Id, task.User.Email);
 
