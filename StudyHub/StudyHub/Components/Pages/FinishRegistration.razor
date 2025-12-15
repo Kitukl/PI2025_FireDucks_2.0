@@ -1,19 +1,19 @@
 @page "/finish-registration"
 @inject NavigationManager Navigation
+@inject ILogger<FinishRegistration> Logger
 
 <div class="auth-container">
     <div class="auth-logo">
         <img src="images/hat.png" alt="StudyHub" class="auth-logo-icon" />
         <h1 class="auth-logo-text"><span class="title-study">STUDY</span><span class="title-hub">HUB</span></h1>
     </div>
-
     <div class="auth-card">
         <div class="auth-mascot">
             <img src="images/fireduck.png" alt="FireDucks" />
         </div>
-        
+
         <h2 class="auth-title">Finish registration</h2>
-        
+
         <div class="auth-form">
             <div class="form-group">
                 <label>Password:</label>
@@ -23,7 +23,6 @@
                     <span class="validation-message">Password is required</span>
                 }
             </div>
-
             <div class="form-group">
                 <label>Confirm password:</label>
                 <input type="password" @bind="confirmPassword" class="form-input" placeholder="***********" />
@@ -32,14 +31,12 @@
                     <span class="validation-message">@errorMessage</span>
                 }
             </div>
-
             @if (showSuccess)
             {
                 <div class="success-message">
                     ✓ Successfully registered! Redirecting to login...
                 </div>
             }
-
             <button class="auth-btn" @onclick="CompleteRegistration" disabled="@showSuccess">Sign up</button>
         </div>
     </div>
@@ -52,16 +49,23 @@
     private bool showSuccess = false;
     private string errorMessage = "";
 
+    protected override void OnInitialized()
+    {
+        Logger.LogInformation("Відкриття сторінки завершення реєстрації");
+    }
+
     private async Task CompleteRegistration()
     {
+        Logger.LogInformation("Початок завершення реєстрації");
+
         showError = false;
         showSuccess = false;
         errorMessage = "";
 
-        // Validation
         if (string.IsNullOrWhiteSpace(password))
         {
             showError = true;
+            Logger.LogWarning("Валідація не пройдена: порожній пароль");
             return;
         }
 
@@ -69,6 +73,7 @@
         {
             showError = true;
             errorMessage = "Passwords do not match";
+            Logger.LogWarning("Валідація не пройдена: паролі не співпадають");
             return;
         }
 
@@ -76,17 +81,30 @@
         {
             showError = true;
             errorMessage = "Password must be at least 5 characters";
+            Logger.LogWarning("Валідація не пройдена: пароль занадто короткий (довжина: {PasswordLength})",
+                password.Length);
             return;
         }
 
-        // TODO: Save user to database here
-        
-        // Show success message
-        showSuccess = true;
-        StateHasChanged();
+        Logger.LogInformation("Валідація пройдена успішно");
 
-        // Wait 2 seconds and redirect to login
-        await Task.Delay(2000);
-        Navigation.NavigateTo("/login");
+        try
+        {
+            Logger.LogInformation("Реєстрація успішно завершена");
+
+            showSuccess = true;
+            StateHasChanged();
+
+            await Task.Delay(2000);
+
+            Logger.LogInformation("Перенаправлення на сторінку входу");
+            Navigation.NavigateTo("/login");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Помилка при завершенні реєстрації");
+            showError = true;
+            errorMessage = "Registration failed. Please try again.";
+        }
     }
 }

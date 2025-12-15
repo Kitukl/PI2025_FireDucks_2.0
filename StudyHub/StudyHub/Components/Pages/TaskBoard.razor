@@ -1,5 +1,12 @@
 ﻿@page "/taskboard"
 @using StudyHub.BLL.Models
+@using StudyHub.BLL.Services
+@using StudyHub.DAL.Entities
+@inject ITaskService TaskService
+@inject AuthStateService AuthState
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+@inject ILogger<TaskBoard> Logger
 
 <div class="taskboard-container" @onclick="CloseFilterDropdown">
     <div class="taskboard-header">
@@ -22,13 +29,28 @@
         </button>
     </div>
 
+    @if (isLoading)
+    {
+        <div class="alert alert-info" style="text-align: center; margin: 15px 0;">Завантаження завдань...</div>
+    }
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="alert alert-danger" style="text-align: center; margin: 15px 0; color: red;">@errorMessage</div>
+    }
+
     @if (showFilterDropdown)
     {
         <div class="filter-dropdown" @onclick:stopPropagation="true">
-            <div class="filter-option" @onclick='() => SetFilter("")'>All Subjects</div>
-            <div class="filter-option" @onclick='() => SetFilter("Subject A")'>Subject A</div>
-            <div class="filter-option" @onclick='() => SetFilter("Subject B")'>Subject B</div>
-            <div class="filter-option" @onclick='() => SetFilter("Subject C")'>Subject C</div>
+            <div class="filter-option @(string.IsNullOrEmpty(filterSubject) ? "filter-active" : "")" @onclick="HandleFilterAll">
+                All Subjects (@tasks.Count)
+            </div>
+            @foreach (var subject in GetUniqueSubjects())
+            {
+                var count = tasks.Count(t => t.Subject == subject);
+                <div class="filter-option @(filterSubject == subject ? "filter-active" : "")" @onclick="() => SetFilter(subject)">
+                    @subject (@count)
+                </div>
+            }
         </div>
     }
 
@@ -36,12 +58,13 @@
         <div class="kanban-column">
             <div class="column-header">
                 <h3>To Do</h3>
-                <span class="task-count">↑↓</span>
+                <span class="task-count">@GetTasksByStatus("To Do").Count()</span>
             </div>
             <div class="column-content">
                 @foreach (var task in GetTasksByStatus("To Do"))
                 {
-                    <div class="task-card" @onclick="() => OpenTaskDetails(task)">
+                    var currentTask = task;
+                    <div class="task-card" @onclick="@(() => OpenTaskDetails(currentTask))">
                         <div class="task-card-header">
                             <h4>@task.Name</h4>
                             <span class="task-status-icon" style="@GetStatusIconColor(task)">@GetStatusIcon(task)</span>
@@ -59,12 +82,13 @@
         <div class="kanban-column">
             <div class="column-header">
                 <h3>In Progress</h3>
-                <span class="task-count">↑↓</span>
+                <span class="task-count">@GetTasksByStatus("In Progress").Count()</span>
             </div>
             <div class="column-content">
                 @foreach (var task in GetTasksByStatus("In Progress"))
                 {
-                    <div class="task-card" @onclick="() => OpenTaskDetails(task)">
+                    var currentTask = task;
+                    <div class="task-card" @onclick="@(() => OpenTaskDetails(currentTask))">
                         <div class="task-card-header">
                             <h4>@task.Name</h4>
                             <span class="task-status-icon" style="@GetStatusIconColor(task)">@GetStatusIcon(task)</span>
@@ -82,12 +106,13 @@
         <div class="kanban-column">
             <div class="column-header">
                 <h3>For Review</h3>
-                <span class="task-count">↑↓</span>
+                <span class="task-count">@GetTasksByStatus("For Review").Count()</span>
             </div>
             <div class="column-content">
                 @foreach (var task in GetTasksByStatus("For Review"))
                 {
-                    <div class="task-card" @onclick="() => OpenTaskDetails(task)">
+                    var currentTask = task;
+                    <div class="task-card" @onclick="@(() => OpenTaskDetails(currentTask))">
                         <div class="task-card-header">
                             <h4>@task.Name</h4>
                             <span class="task-status-icon" style="@GetStatusIconColor(task)">@GetStatusIcon(task)</span>
@@ -105,12 +130,13 @@
         <div class="kanban-column">
             <div class="column-header">
                 <h3>Done</h3>
-                <span class="task-count">↑↓</span>
+                <span class="task-count">@GetTasksByStatus("Done").Count()</span>
             </div>
             <div class="column-content">
                 @foreach (var task in GetTasksByStatus("Done"))
                 {
-                    <div class="task-card task-card-done" @onclick="() => OpenTaskDetails(task)">
+                    var currentTask = task;
+                    <div class="task-card task-card-done" @onclick="@(() => OpenTaskDetails(currentTask))">
                         <div class="task-card-header">
                             <h4>@task.Name</h4>
                             <span class="task-status-icon" style="@GetStatusIconColor(task)">@GetStatusIcon(task)</span>
@@ -179,7 +205,7 @@
 
                 <div class="modal-footer">
                     <button @onclick="CloseCreateTaskModal" class="btn-secondary">Cancel</button>
-                    <button @onclick="CreateNewTask" class="btn-primary">Create</button>
+                    <button @onclick="CreateNewTask" class="btn-primary" disabled="@isLoading">Create</button>
                 </div>
             </div>
         </div>
@@ -270,17 +296,89 @@
                     </div>
 
                     <div class="form-group">
-                        <label>Notes</label>
-                        <textarea placeholder="Add notes..." rows="3" class="form-textarea" @bind="taskNotes"></textarea>
-                        <button class="btn-primary" style="margin-top: 10px;" @onclick="SaveTaskNotes">Save Comment</button>
+                        <label>Comments (@taskComments.Count)</label>
+                        @if (taskComments.Any())
+                        {
+                            <div class="comments-list">
+                                @foreach (var comment in taskComments)
+                                {
+                                    <div class="comment-item">
+                                        <div class="comment-header">
+                                            <strong>@comment.AuthorName</strong>
+                                            <div>
+                                                <small>@comment.CreationDate.ToString("dd/MM/yyyy HH:mm")</small>
+                                                @if (comment.UserId == AuthState.UserId)
+                                                {
+                                                    @if (editingCommentId == comment.Id)
+                                                    {
+                                                        <button class="btn-icon" @onclick="() => CancelEditComment()" title="Cancel">
+                                                            ✖
+                                                        </button>
+                                                    }
+                                                    else
+                                                    {
+                                                        <button class="btn-icon" @onclick="() => StartEditComment(comment)" title="Edit">
+                                                            ✏️
+                                                        </button>
+                                                        <button class="btn-icon btn-icon-danger" @onclick="() => DeleteComment(comment.Id)" title="Delete">
+                                                            🗑️
+                                                        </button>
+                                                    }
+                                                }
+                                            </div>
+                                        </div>
+
+                                        @if (editingCommentId == comment.Id)
+                                        {
+                                            <textarea @bind="editingCommentText"
+                                                      rows="3"
+                                                      class="form-textarea"
+                                                      style="margin-bottom: 8px;"></textarea>
+                                            <button class="btn-primary btn-small"
+                                                    @onclick="SaveEditComment"
+                                                    disabled="@isLoading">
+                                                Save
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <p class="comment-text">@comment.Description</p>
+                                        }
+                                    </div>
+                                }
+                            </div>
+                        }
+                        else
+                        {
+                            <p class="no-comments">No comments yet. Be the first to comment!</p>
+                        }
+
+                        <textarea placeholder="Add a comment..."
+                                  rows="3"
+                                  class="form-textarea"
+                                  @bind="taskNotes"
+                                  style="margin-top: 10px;"></textarea>
+                        <button class="btn-primary"
+                                style="margin-top: 10px;"
+                                @onclick="SaveTaskNotes"
+                                disabled="@(isLoading || string.IsNullOrWhiteSpace(taskNotes))">
+                            @if (isLoading)
+                            {
+                                <span>Saving...</span>
+                            }
+                            else
+                            {
+                                <span>Add Comment</span>
+                            }
+                        </button>
                     </div>
                 </div>
 
                 <div class="modal-footer">
-                    <button @onclick="DeleteTask" class="btn-delete">Delete</button>
+                    <button @onclick="DeleteTask" class="btn-delete" disabled="@isLoading">Delete</button>
                     <div class="modal-footer-right">
-                        <button @onclick="ToggleEditMode" class="btn-secondary">@(isEditMode ? "Cancel" : "Edit")</button>
-                        <button @onclick="SaveTaskChanges" class="btn-primary">@(isEditMode ? "Save Changes" : "Done")</button>
+                        <button @onclick="ToggleEditMode" class="btn-secondary" disabled="@isLoading">@(isEditMode ? "Cancel" : "Edit")</button>
+                        <button @onclick="SaveTaskChanges" class="btn-primary" disabled="@isLoading">@(isEditMode ? "Save Changes" : "Done")</button>
                     </div>
                 </div>
             </div>
@@ -288,8 +386,107 @@
     }
 </div>
 
+<style>
+
+    .comments-list {
+        max-height: 300px;
+        overflow-y: auto;
+        margin-bottom: 15px;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        padding: 15px;
+        background: #f8f9fa;
+    }
+
+    .comment-item {
+        padding: 12px;
+        margin-bottom: 12px;
+        background: white;
+        border-radius: 6px;
+        border-left: 3px solid #007bff;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+        .comment-item:last-child {
+            margin-bottom: 0;
+        }
+
+    .comment-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+
+        .comment-header strong {
+            color: #495057;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .comment-header small {
+            color: #6c757d;
+            font-size: 12px;
+        }
+
+    .comment-text {
+        margin: 0;
+        color: #212529;
+        line-height: 1.5;
+        font-size: 14px;
+    }
+
+    .no-comments {
+        color: #6c757d;
+        font-style: italic;
+        text-align: center;
+        padding: 20px;
+        background: #f8f9fa;
+        border-radius: 6px;
+        margin-bottom: 15px;
+    }
+
+    .btn-icon {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 14px;
+        padding: 4px 8px;
+        margin-left: 8px;
+        opacity: 0.7;
+        transition: opacity 0.2s;
+    }
+
+        .btn-icon:hover {
+            opacity: 1;
+        }
+
+    .btn-icon-danger:hover {
+        opacity: 1;
+        filter: brightness(1.2);
+    }
+
+    .btn-small {
+        padding: 6px 12px;
+        font-size: 14px;
+    }
+
+    .comment-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+
+        .comment-header > div {
+            display: flex;
+            align-items: center;
+        }
+</style>
+
 @code {
     private List<TaskItem> tasks = new();
+    private List<CommentItem> taskComments = new();
     private string searchQuery = "";
     private string filterSubject = "";
     private bool showCreateModal = false;
@@ -302,6 +499,8 @@
     private string editTaskDescription = "";
     private string editTaskSubject = "";
     private DateTime? editTaskDueDate;
+    private bool isLoading = false;
+    private string errorMessage = "";
 
     private string newTaskName = "";
     private string newTaskDescription = "";
@@ -309,30 +508,92 @@
     private DateTime? newTaskDueDate;
     private int newTaskReminderDays = 2;
 
-    protected override void OnInitialized()
+    private int? editingCommentId = null;
+    private string editingCommentText = "";
+
+
+    protected override async System.Threading.Tasks.Task OnInitializedAsync()
     {
-        LoadTasks();
+        Logger.LogInformation("Ініціалізація сторінки Taskboard");
+
+        if (!AuthState.IsAuthenticated)
+        {
+            Logger.LogWarning("Спроба доступу до Taskboard без автентифікації. Перенаправлення на /login");
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        Logger.LogInformation("Користувач автентифікований: UserId={UserId}", AuthState.UserId);
+        await LoadTasks();
     }
 
-    private void LoadTasks()
+    private async System.Threading.Tasks.Task LoadTasks()
     {
-        tasks = new List<TaskItem>
+        if (!AuthState.UserId.HasValue)
         {
-            new TaskItem { Id = 1, Name = "New Task#1", Subject = "Subject A", Code = "A-1", Status = "To Do", Description = "Complete the first assignment", DueDate = DateTime.Now.AddDays(7), CreationDate = DateTime.Now.AddDays(-3) },
-            new TaskItem { Id = 2, Name = "New Task#2", Subject = "Subject B", Code = "B-1", Status = "In Progress", Description = "Work on project B", DueDate = DateTime.Now.AddDays(5), CreationDate = DateTime.Now.AddDays(-5) },
-            new TaskItem { Id = 3, Name = "New Task#3", Subject = "Subject C", Code = "C-1", Status = "In Progress", Description = "Study for exam", DueDate = DateTime.Now.AddDays(10), CreationDate = DateTime.Now.AddDays(-2) },
-            new TaskItem { Id = 4, Name = "New Task#4", Subject = "Subject B", Code = "B-2", Status = "In Progress", Description = "Submit report for review", DueDate = DateTime.Now.AddDays(3), CreationDate = DateTime.Now.AddDays(-4) },
-            new TaskItem { Id = 5, Name = "New Task#5", Subject = "Subject A", Code = "A-2", Status = "Done", Description = "Create presentation", DueDate = DateTime.Now.AddDays(-2), CreationDate = DateTime.Now.AddDays(-10) },
-            new TaskItem { Id = 6, Name = "New Task#6", Subject = "Subject C", Code = "C-2", Status = "For Review", Description = "Lab work completion", DueDate = DateTime.Now.AddDays(4), CreationDate = DateTime.Now.AddDays(-6) },
-            new TaskItem { Id = 7, Name = "New Task#7", Subject = "Subject A", Code = "A-3", Status = "For Review", Description = "Read chapters 5-7", DueDate = DateTime.Now.AddDays(6), CreationDate = DateTime.Now.AddDays(-1) },
-        };
+            Logger.LogWarning("Спроба завантажити завдання без UserId");
+            return;
+        }
+
+        Logger.LogInformation("Завантаження завдань для користувача: UserId={UserId}", AuthState.UserId.Value);
+        errorMessage = "";
+
+        try
+        {
+            isLoading = true;
+            tasks = await TaskService.GetUserTasksAsync(AuthState.UserId.Value);
+
+            Logger.LogInformation("Завдання успішно завантажено: {TaskCount} шт, UserId={UserId}",
+                tasks.Count, AuthState.UserId.Value);
+
+            var statusCounts = tasks.GroupBy(t => t.Status)
+                .Select(g => $"{g.Key}: {g.Count()}");
+            Logger.LogInformation("Розподіл по статусам: {StatusDistribution}", string.Join(", ", statusCounts));
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Помилка завантаження завдань: UserId={UserId}", AuthState.UserId.Value);
+            errorMessage = $"Failed to load tasks: {ex.Message}";
+            tasks = new List<TaskItem>();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async System.Threading.Tasks.Task LoadCommentsForTask(int taskId)
+    {
+        Logger.LogInformation("Завантаження коментарів для завдання: TaskId={TaskId}", taskId);
+
+        try
+        {
+            taskComments = await TaskService.GetTaskCommentsAsync(taskId);
+            Logger.LogInformation("Завантажено {CommentCount} коментарів для TaskId={TaskId}",
+                taskComments.Count, taskId);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Помилка завантаження коментарів: TaskId={TaskId}", taskId);
+            taskComments = new List<CommentItem>();
+        }
+    }
+
+    private IEnumerable<string> GetUniqueSubjects()
+    {
+        return tasks
+            .Where(t => !string.IsNullOrEmpty(t.Subject))
+            .Select(t => t.Subject)
+            .Distinct()
+            .OrderBy(s => s);
     }
 
     private IEnumerable<TaskItem> GetTasksByStatus(string status)
     {
-        return tasks.Where(t => t.Status == status &&
-                               (string.IsNullOrEmpty(searchQuery) || t.Name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)) &&
-                               (string.IsNullOrEmpty(filterSubject) || t.Subject == filterSubject));
+        return tasks
+            .Where(t => t.Status == status &&
+                        (string.IsNullOrEmpty(searchQuery) || t.Name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)) &&
+                        (string.IsNullOrEmpty(filterSubject) || t.Subject == filterSubject));
     }
 
     private void ToggleFilterDropdown()
@@ -347,12 +608,18 @@
 
     private void SetFilter(string subject)
     {
+        Logger.LogInformation("Застосовано фільтр: Subject={Subject}", subject ?? "All");
         filterSubject = subject;
         showFilterDropdown = false;
+        StateHasChanged();
     }
+
+    private void HandleFilterAll() => SetFilter("");
 
     private void OpenCreateTaskModal()
     {
+        Logger.LogInformation("Відкриття модального вікна створення завдання");
+        errorMessage = "";
         showCreateModal = true;
         ResetCreateForm();
     }
@@ -372,56 +639,97 @@
         newTaskReminderDays = 2;
     }
 
-    private void OpenTaskDetails(TaskItem task)
+    private async System.Threading.Tasks.Task OpenTaskDetails(TaskItem task)
     {
+        Logger.LogInformation("Відкриття деталей завдання: TaskId={TaskId}, Name={TaskName}",
+            task.Id, task.Name);
+
+        errorMessage = "";
         selectedTask = task;
         selectedTaskStatus = task.Status;
         taskNotes = "";
         isEditMode = false;
+        editingCommentId = null;
+        editingCommentText = "";
+
         editTaskName = task.Name;
         editTaskDescription = task.Description;
         editTaskSubject = task.Subject;
         editTaskDueDate = task.DueDate;
+
+        await LoadCommentsForTask(task.Id);
     }
 
     private void CloseTaskDetails()
     {
+        if (selectedTask != null)
+        {
+            Logger.LogInformation("Закриття деталей завдання: TaskId={TaskId}", selectedTask.Id);
+        }
+
         selectedTask = null;
         taskNotes = "";
         isEditMode = false;
+        taskComments = new List<CommentItem>();
+        editingCommentId = null;
+        editingCommentText = "";
     }
 
-    private void CreateNewTask()
+    private async System.Threading.Tasks.Task CreateNewTask()
     {
-        if (string.IsNullOrWhiteSpace(newTaskName))
-            return;
-
-        var taskCount = tasks.Count(t => t.Subject == newTaskSubject) + 1;
-        var subjectCode = newTaskSubject.Replace("Subject ", "");
-
-        var newTask = new TaskItem
+        if (string.IsNullOrWhiteSpace(newTaskName) || string.IsNullOrWhiteSpace(newTaskSubject))
         {
-            Id = tasks.Count > 0 ? tasks.Max(t => t.Id) + 1 : 1,
-            Name = newTaskName,
-            Description = newTaskDescription,
-            Subject = newTaskSubject,
-            Code = $"{subjectCode}-{taskCount}",
-            DueDate = newTaskDueDate,
-            CreationDate = DateTime.Now,
-            Status = "To Do",
-            ReminderDays = newTaskReminderDays
-        };
+            Logger.LogWarning("Спроба створити завдання з порожніми полями");
+            return;
+        }
 
-        tasks.Add(newTask);
-        CloseCreateTaskModal();
+        if (!AuthState.UserId.HasValue)
+        {
+            Logger.LogWarning("Спроба створити завдання без UserId");
+            return;
+        }
+
+        Logger.LogInformation("Створення нового завдання: Name={TaskName}, Subject={Subject}, UserId={UserId}",
+            newTaskName, newTaskSubject, AuthState.UserId.Value);
+
+        try
+        {
+            isLoading = true;
+            await TaskService.CreateTaskAsync(
+                AuthState.UserId.Value,
+                newTaskName,
+                newTaskDescription,
+                newTaskSubject,
+                newTaskDueDate ?? DateTime.Now.AddDays(7),
+                Status.InProgress
+            );
+
+            Logger.LogInformation("Завдання успішно створено: Name={TaskName}, UserId={UserId}",
+                newTaskName, AuthState.UserId.Value);
+
+            await LoadTasks();
+            CloseCreateTaskModal();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Помилка створення завдання: Name={TaskName}, UserId={UserId}",
+                newTaskName, AuthState.UserId.Value);
+            errorMessage = $"Failed to create task: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
     }
 
     private void ToggleEditMode()
     {
         isEditMode = !isEditMode;
+        Logger.LogInformation("Режим редагування: {EditMode}, TaskId={TaskId}",
+            isEditMode ? "увімкнено" : "вимкнено", selectedTask?.Id);
+
         if (!isEditMode && selectedTask != null)
         {
-            // Скасування змін - повернення до оригінальних значень
             editTaskName = selectedTask.Name;
             editTaskDescription = selectedTask.Description;
             editTaskSubject = selectedTask.Subject;
@@ -429,40 +737,221 @@
         }
     }
 
-    private void SaveTaskChanges()
+    private async System.Threading.Tasks.Task SaveTaskChanges()
     {
-        if (selectedTask != null)
+        if (selectedTask == null)
         {
-            selectedTask.Status = selectedTaskStatus;
-            
-            if (isEditMode)
+            Logger.LogWarning("Спроба зберегти зміни без вибраного завдання");
+            return;
+        }
+
+        Logger.LogInformation("Збереження змін завдання: TaskId={TaskId}, EditMode={EditMode}, StatusChanged={StatusChanged}",
+            selectedTask.Id, isEditMode, selectedTaskStatus != selectedTask.Status);
+
+        try
+        {
+            isLoading = true;
+
+            await TaskService.UpdateTaskAsync(
+                selectedTask.Id,
+                isEditMode ? editTaskName : selectedTask.Name,
+                isEditMode ? editTaskDescription : selectedTask.Description,
+                isEditMode ? editTaskSubject : selectedTask.Subject,
+                selectedTaskStatus,
+                isEditMode ? editTaskDueDate : selectedTask.DueDate
+            );
+
+            Logger.LogInformation("Зміни успішно збережено: TaskId={TaskId}", selectedTask.Id);
+
+            await LoadTasks();
+            CloseTaskDetails();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Помилка збереження змін: TaskId={TaskId}", selectedTask.Id);
+            errorMessage = $"Failed to save changes: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async System.Threading.Tasks.Task SaveTaskNotes()
+    {
+        if (selectedTask == null || string.IsNullOrWhiteSpace(taskNotes))
+        {
+            Logger.LogWarning("Спроба зберегти коментар з порожнім текстом");
+            return;
+        }
+
+        if (!AuthState.UserId.HasValue)
+        {
+            Logger.LogWarning("Спроба зберегти коментар без UserId");
+            errorMessage = "User not authenticated";
+            return;
+        }
+
+        Logger.LogInformation("Додавання коментаря: TaskId={TaskId}, UserId={UserId}, CommentLength={Length}",
+            selectedTask.Id, AuthState.UserId.Value, taskNotes.Length);
+
+        try
+        {
+            isLoading = true;
+            errorMessage = "";
+
+            await TaskService.CreateCommentAsync(
+                taskId: selectedTask.Id,
+                userId: AuthState.UserId.Value,
+                description: taskNotes
+            );
+
+            Logger.LogInformation("Коментар успішно збережено: TaskId={TaskId}, UserId={UserId}",
+                selectedTask.Id, AuthState.UserId.Value);
+
+            taskNotes = "";
+            await LoadCommentsForTask(selectedTask.Id);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Помилка збереження коментаря: TaskId={TaskId}, UserId={UserId}",
+                selectedTask.Id, AuthState.UserId.Value);
+            errorMessage = $"Failed to save comment: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async System.Threading.Tasks.Task DeleteTask()
+    {
+        if (selectedTask == null)
+        {
+            Logger.LogWarning("Спроба видалити завдання без вибраного завдання");
+            return;
+        }
+
+        Logger.LogInformation("Видалення завдання: TaskId={TaskId}, Name={TaskName}",
+            selectedTask.Id, selectedTask.Name);
+
+        try
+        {
+            isLoading = true;
+            await TaskService.DeleteTaskAsync(selectedTask.Id);
+
+            Logger.LogInformation("Завдання успішно видалено: TaskId={TaskId}", selectedTask.Id);
+
+            await LoadTasks();
+            CloseTaskDetails();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Помилка видалення завдання: TaskId={TaskId}", selectedTask.Id);
+            errorMessage = $"Failed to delete task: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void StartEditComment(CommentItem comment)
+    {
+        Logger.LogInformation("Початок редагування коментаря: CommentId={CommentId}", comment.Id);
+        editingCommentId = comment.Id;
+        editingCommentText = comment.Description;
+    }
+
+    private void CancelEditComment()
+    {
+        Logger.LogInformation("Скасування редагування коментаря: CommentId={CommentId}", editingCommentId);
+        editingCommentId = null;
+        editingCommentText = "";
+    }
+
+    private async System.Threading.Tasks.Task SaveEditComment()
+    {
+        if (editingCommentId == null || string.IsNullOrWhiteSpace(editingCommentText))
+        {
+            Logger.LogWarning("Спроба зберегти коментар з порожнім текстом");
+            return;
+        }
+
+        Logger.LogInformation("Збереження змін коментаря: CommentId={CommentId}", editingCommentId.Value);
+
+        try
+        {
+            isLoading = true;
+            errorMessage = "";
+
+            await TaskService.UpdateCommentAsync(editingCommentId.Value, editingCommentText);
+
+            Logger.LogInformation("Коментар успішно оновлено: CommentId={CommentId}", editingCommentId.Value);
+
+            editingCommentId = null;
+            editingCommentText = "";
+
+            if (selectedTask != null)
             {
-                selectedTask.Name = editTaskName;
-                selectedTask.Description = editTaskDescription;
-                selectedTask.Subject = editTaskSubject;
-                selectedTask.DueDate = editTaskDueDate;
-                isEditMode = false;
+                await LoadCommentsForTask(selectedTask.Id);
             }
         }
-        CloseTaskDetails();
-    }
-
-    private void SaveTaskNotes()
-    {
-        if (!string.IsNullOrWhiteSpace(taskNotes))
+        catch (Exception ex)
         {
-            // Тут можна додати логіку збереження коментаря в базу даних
-            // Наразі просто очищаємо поле після "збереження"
-            taskNotes = "";
+            Logger.LogError(ex, "Помилка оновлення коментаря: CommentId={CommentId}", editingCommentId.Value);
+            errorMessage = $"Failed to update comment: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
         }
     }
 
-    private void DeleteTask()
+    private async System.Threading.Tasks.Task DeleteComment(int commentId)
     {
-        if (selectedTask != null)
+        Logger.LogInformation("Запит на видалення коментаря: CommentId={CommentId}", commentId);
+
+        if (!await ConfirmDelete())
         {
-            tasks.Remove(selectedTask);
-            CloseTaskDetails();
+            Logger.LogInformation("Видалення коментаря скасовано користувачем: CommentId={CommentId}", commentId);
+            return;
+        }
+
+        try
+        {
+            isLoading = true;
+            errorMessage = "";
+
+            await TaskService.DeleteCommentAsync(commentId);
+
+            Logger.LogInformation("Коментар успішно видалено: CommentId={CommentId}", commentId);
+
+            if (selectedTask != null)
+            {
+                await LoadCommentsForTask(selectedTask.Id);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Помилка видалення коментаря: CommentId={CommentId}", commentId);
+            errorMessage = $"Failed to delete comment: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task<bool> ConfirmDelete()
+    {
+        try
+        {
+            return await JSRuntime.InvokeAsync<bool>("confirm", "Are you sure you want to delete this comment?");
+        }
+        catch (Exception)
+        {
+            return await System.Threading.Tasks.Task.FromResult(true);
         }
     }
 
@@ -470,45 +959,38 @@
     {
         if (task.Status == "Done")
         {
-            // Якщо Done і дедлайн пропущений - червоний хрестик
             if (task.DueDate.HasValue && task.DueDate.Value.Date < DateTime.Now.Date)
             {
                 return "✖";
             }
-            // Якщо Done до дедлайну - галочка
             return "✓";
         }
 
         if (!task.DueDate.HasValue)
         {
-            return "⚫"; // Заповнений кружок якщо немає дедлайну
+            return "⚫";
         }
 
         var daysUntilDue = (task.DueDate.Value.Date - DateTime.Now.Date).Days;
 
         if (daysUntilDue < 0)
         {
-            // Пропущений дедлайн
             return "✖";
         }
         else if (daysUntilDue <= 1)
         {
-            // 1 день або сьогодні
             return "!!";
         }
         else if (daysUntilDue <= 3)
         {
-            // 2-3 дні
             return "!";
         }
         else if (daysUntilDue <= 7)
         {
-            // 4-7 днів
             return "○";
         }
         else
         {
-            // 8+ днів
             return "⚫";
         }
     }
@@ -517,12 +999,10 @@
     {
         if (task.Status == "Done")
         {
-            // Якщо Done і дедлайн пропущений - червоний
             if (task.DueDate.HasValue && task.DueDate.Value.Date < DateTime.Now.Date)
             {
                 return "color: #dc3545;";
             }
-            // Якщо Done до дедлайну - зелений
             return "color: #28a745;";
         }
 
@@ -535,12 +1015,10 @@
 
         if (daysUntilDue < 0 || daysUntilDue <= 3)
         {
-            // Пропущений дедлайн або критично близько (1-3 дні)
             return "color: #dc3545;";
         }
         else
         {
-            // Все інше - звичайний колір
             return "color: var(--color-text-primary);";
         }
     }

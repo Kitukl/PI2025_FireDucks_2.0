@@ -1,19 +1,20 @@
 using MediatR;
-using StudyHub.DAL.Repositories;
+using StudyHub.BLL.Services;
 
 namespace StudyHub.BLL.Commands.Storage.Folder.Delete;
 
-public class DeleteTaskCommandHandler : IRequestHandler<DeleteCommand, int>
+public class DeleteCommandHandler : IRequestHandler<DeleteCommand, int>
 {
-    private readonly CommentsRepository _repository;
+    private readonly IFileStorageService _fileStorage;
 
-    public DeleteTaskCommandHandler(CommentsRepository repository)
+    public DeleteCommandHandler(IFileStorageService fileStorage)
     {
-        _repository = repository;
+        _fileStorage = fileStorage;
     }
 
     public async Task<int> Handle(DeleteCommand request, CancellationToken cancellationToken)
     {
-        return await _repository.DeleteAsync(request.id);
+        await _fileStorage.DeleteFolderAsync(request.UserId, request.FolderPath);
+        return 1;
     }
 }

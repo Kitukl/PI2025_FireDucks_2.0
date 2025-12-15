@@ -14,6 +14,6 @@ public class DeleteTaskCommandHandler : IRequestHandler<DeleteCommand>
 
     public async System.Threading.Tasks.Task Handle(DeleteCommand request, CancellationToken cancellationToken)
     {
-        await _fileStorage.DeleteFileAsync(request.FilePath);
+        await _fileStorage.DeleteFileAsync(request.UserId, request.FilePath);
     }
 }
