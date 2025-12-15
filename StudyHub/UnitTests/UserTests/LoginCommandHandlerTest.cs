@@ -13,7 +13,7 @@ public class LoginCommandHandlerTests
 {
     private readonly Mock<UserRepository> _mockUserRepository;
     private readonly LoginCommandHandler _handler;
-    
+
     private readonly StudyHub.DAL.Entities.User _testUser = new StudyHub.DAL.Entities.User
     {
         Id = 1,
@@ -36,7 +36,7 @@ public class LoginCommandHandlerTests
         const string validEmail = "test@example.com";
         const string validPassword = "ValidPassword123";
         var command = new LoginCommand(validEmail, validPassword);
-        
+
         _mockUserRepository
             .Setup(r => r.GetByEmail(validEmail))
             .ReturnsAsync(_testUser);
@@ -46,7 +46,6 @@ public class LoginCommandHandlerTests
 
         // Assert
         _mockUserRepository.Verify(r => r.GetByEmail(validEmail), Times.Once);
-
         Assert.NotNull(result);
         Assert.Equal(_testUser.Id, result.Id);
         Assert.Equal(_testUser.Email, result.Email);
@@ -63,7 +62,7 @@ public class LoginCommandHandlerTests
 
         _mockUserRepository
             .Setup(r => r.GetByEmail(nonExistentEmail))
-            .ReturnsAsync((StudyHub.DAL.Entities.User)null);
+            .ThrowsAsync(new Exception("Not found user"));
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(
@@ -91,7 +90,7 @@ public class LoginCommandHandlerTests
             () => _handler.Handle(command, CancellationToken.None)
         );
 
-        Assert.Equal("Невірний пароль", exception.Message);
+        Assert.Equal("Неправильний пароль", exception.Message);
         _mockUserRepository.Verify(r => r.GetByEmail(email), Times.Once);
     }
 }

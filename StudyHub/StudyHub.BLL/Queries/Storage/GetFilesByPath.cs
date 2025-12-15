@@ -3,7 +3,7 @@ using StudyHub.BLL.Services;
 
 namespace StudyHub.BLL.Queries.Storage;
 
-public record GetFilesByPath(string Path) : IRequest<IEnumerable<string>>;
+public record GetFilesByPath(int UserId, string Path) : IRequest<IEnumerable<string>>;
 
 public class GetFilesByPathHandler : IRequestHandler<GetFilesByPath, IEnumerable<string>>
 {
@@ -16,8 +16,7 @@ public class GetFilesByPathHandler : IRequestHandler<GetFilesByPath, IEnumerable
 
     public async Task<IEnumerable<string>> Handle(GetFilesByPath request, CancellationToken cancellationToken)
     {
-        // Отримуємо всі файли у поточному каталозі
-        var files = await _fileStorage.GetFilesAsync(request.Path);
+        var files = await _fileStorage.GetFilesAsync(request.UserId, request.Path);
         return files.OrderBy(f => f);
     }
 }

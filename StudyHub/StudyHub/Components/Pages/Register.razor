@@ -1,35 +1,48 @@
 @page "/register"
 @inject NavigationManager Navigation
+@inject IUserService UserService
+@inject ILogger<Register> Logger
 
 <div class="auth-container">
     <div class="auth-logo">
         <img src="images/hat.png" alt="StudyHub" class="auth-logo-icon" />
         <h1 class="auth-logo-text"><span class="title-study">STUDY</span><span class="title-hub">HUB</span></h1>
     </div>
-
     <div class="auth-card">
         <div class="auth-mascot">
             <img src="images/fireduck.png" alt="FireDucks" />
         </div>
-        
+
         <h2 class="auth-title">Registration form</h2>
-        
+
         <div class="auth-form">
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="alert alert-danger" style="color: red; margin-bottom: 10px; padding: 10px; border: 1px solid red;">
+                    @errorMessage
+                </div>
+            }
+
             <div class="form-group">
                 <label>Name:</label>
                 <input type="text" @bind="name" class="form-input" />
             </div>
-
             <div class="form-group">
                 <label>Surname:</label>
                 <input type="text" @bind="surname" class="form-input" />
             </div>
-
             <div class="form-group">
                 <label>e-mail:</label>
                 <input type="email" @bind="email" class="form-input" />
             </div>
-
+            <div class="form-group">
+                <label>Password:</label>
+                <input type="password" @bind="password" class="form-input" />
+            </div>
+            <div class="form-group">
+                <label>Confirm Password:</label>
+                <input type="password" @bind="confirmPassword" class="form-input" />
+            </div>
             <div class="form-group">
                 <label>Group:</label>
                 <select @bind="group" class="form-select">
@@ -38,11 +51,23 @@
                     <option value="PMI-32">PMI-32</option>
                     <option value="PMI-33">PMI-33</option>
                     <option value="PMI-34">PMI-34</option>
+                    <option value="PMI-35">PMI-35</option>
+                    <option value="PMI-36">PMI-36</option>
+                    <option value="PMK-31">PMK-31</option>
+                    <option value="PMK-32">PMK-32</option>
+                    <option value="PMO-31">PMO-31</option>
                 </select>
             </div>
-
-            <button class="auth-btn" @onclick="SignUp">Sign up</button>
-
+            <button class="auth-btn" @onclick="SignUp" disabled="@isLoading">
+                @if (isLoading)
+                {
+                    <span>Loading...</span>
+                }
+                else
+                {
+                    <span>Sign up</span>
+                }
+            </button>
             <div class="auth-footer">
                 Already have an account? <a href="/login">Log In</a>
             </div>
@@ -54,12 +79,91 @@
     private string name = "";
     private string surname = "";
     private string email = "";
+    private string password = "";
+    private string confirmPassword = "";
     private string group = "";
+    private string errorMessage = "";
+    private bool isLoading = false;
 
-    private void SignUp()
+    private async Task SignUp()
     {
-        // TODO: Validation
-        // Navigate to finish registration
-        Navigation.NavigateTo("/finish-registration");
+        Logger.LogInformation("Початок процесу реєстрації на UI");
+        errorMessage = "";
+
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            errorMessage = "Please enter your name";
+            Logger.LogWarning("Валідація не пройдена: порожнє ім'я");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(surname))
+        {
+            errorMessage = "Please enter your surname";
+            Logger.LogWarning("Валідація не пройдена: порожнє прізвище");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(email))
+        {
+            errorMessage = "Please enter your email";
+            Logger.LogWarning("Валідація не пройдена: порожній email");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(password))
+        {
+            errorMessage = "Please enter a password";
+            Logger.LogWarning("Валідація не пройдена: порожній пароль");
+            return;
+        }
+
+        if (password.Length < 6)
+        {
+            errorMessage = "Password must be at least 6 characters";
+            Logger.LogWarning("Валідація не пройдена: пароль занадто короткий (довжина: {PasswordLength})", password.Length);
+            return;
+        }
+
+        if (password != confirmPassword)
+        {
+            errorMessage = "Passwords do not match";
+            Logger.LogWarning("Валідація не пройдена: паролі не співпадають");
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(group))
+        {
+            errorMessage = "Please select your group";
+            Logger.LogWarning("Валідація не пройдена: група не вибрана");
+            return;
+        }
+
+        Logger.LogInformation("Валідація пройдена успішно. Відправка форми реєстрації: Email={Email}, Group={Group}", email, group);
+
+        try
+        {
+            isLoading = true;
+
+            var userId = await UserService.RegisterUserAsync(name, surname, email, password, group);
+
+            Logger.LogInformation("Реєстрація успішна. Перенаправлення на finish-registration. UserId={UserId}", userId);
+            Navigation.NavigateTo("/finish-registration");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Registration failed: {ex.Message}";
+
+            if (ex.InnerException != null)
+            {
+                errorMessage += $"\n\nDetails: {ex.InnerException.Message}";
+            }
+
+            Logger.LogError(ex, "Помилка реєстрації на UI: Email={Email}, Group={Group}", email, group);
+        }
+        finally
+        {
+            isLoading = false;
+        }
     }
 }

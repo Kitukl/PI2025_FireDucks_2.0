@@ -1,4 +1,16 @@
 ﻿@page "/storage"
+@using MediatR
+@using StudyHub.BLL.Queries.Storage
+@using FileCreateCommand = StudyHub.BLL.Commands.Storage.Files.Create.CreateCommand
+@using FileDeleteCommand = StudyHub.BLL.Commands.Storage.Files.Delete.DeleteCommand
+@using FolderCreateCommand = StudyHub.BLL.Commands.Storage.Folder.Create.CreateCommand
+@using FolderDeleteCommand = StudyHub.BLL.Commands.Storage.Folder.Delete.DeleteCommand
+@using Microsoft.AspNetCore.Components.Forms
+@inject IMediator Mediator
+@inject IJSRuntime JSRuntime
+@inject AuthStateService AuthState
+@inject NavigationManager Navigation
+@inject ILogger<Storage> Logger
 
 <div class="storage-container" @onclick="CloseFilterDropdown">
     <div class="storage-header" @onclick:stopPropagation="true">
@@ -16,9 +28,14 @@
             Filter By
         </button>
 
-        <button class="add-files-btn">
-            Add Files
+        <button class="create-folder-btn" @onclick="ShowCreateFolderDialog">
+            📁 New Folder
         </button>
+
+        <div class="file-upload-wrapper">
+            <InputFile OnChange="HandleFileUpload" class="file-input" id="fileInput" multiple />
+            <label for="fileInput" class="add-files-btn">📤 Add Files</label>
+        </div>
     </div>
 
     @if (showFilterDropdown)
@@ -27,62 +44,709 @@
             <div class="filter-option" @onclick='() => SetFilter("")'>All Types</div>
             <div class="filter-option" @onclick='() => SetFilter("Document")'>Documents</div>
             <div class="filter-option" @onclick='() => SetFilter("PDF")'>PDFs</div>
+            <div class="filter-option" @onclick='() => SetFilter("Spreadsheet")'>Spreadsheets</div>
+            <div class="filter-option" @onclick='() => SetFilter("Text")'>Text Files</div>
+        </div>
+    }
+
+    <div class="path-navigation">
+        <button @onclick='() => NavigateToPath("")' class="path-btn">📁 Root</button>
+        @if (!string.IsNullOrEmpty(currentPath))
+        {
+            <span class="path-separator">/</span>
+            <span class="current-path">@currentPath</span>
+        }
+    </div>
+
+    @if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <div class="error-message">
+            ⚠️ @errorMessage
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(successMessage))
+    {
+        <div class="success-message">
+            ✓ @successMessage
         </div>
     }
 
     <div class="storage-content" @onclick:stopPropagation="true">
-        <div class="files-grid-full">
-            @foreach (var item in GetCurrentItems())
-            {
-                <div class="file-item" @onclick="() => SelectItem(item)">
-                    <div class="file-icon">@GetFileIcon(item.Type)</div>
-                    <div class="file-name">@item.Name</div>
-                    <div class="file-meta">
-                        <span class="file-date">@item.Date.ToString("dd.MM.yyyy HH:mm")</span>
-                        @if (item.Size.HasValue)
-                        {
-                            <span class="file-size">@FormatFileSize(item.Size.Value)</span>
-                        }
+        @if (isLoading)
+        {
+            <div class="loading">Loading...</div>
+        }
+        else
+        {
+            <div class="files-grid-full">
+                @foreach (var folder in GetCurrentFolders())
+                {
+                    <div class="file-item folder-item">
+                        <div class="folder-content" @onclick="() => NavigateToPath(folder)">
+                            <div class="file-icon">📁</div>
+                            <div class="file-name">@folder</div>
+                            <div class="file-meta">
+                                <span class="file-type">Folder</span>
+                            </div>
+                        </div>
+                        <button class="delete-btn-folder" @onclick="() => DeleteFolder(folder)" @onclick:stopPropagation="true">🗑️</button>
                     </div>
-                </div>
-            }
-        </div>
+                }
+
+                @foreach (var item in GetCurrentFiles())
+                {
+                    <div class="file-item" @onclick="() => SelectItem(item)">
+                        <div class="file-icon">@GetFileIcon(item.Name)</div>
+                        <div class="file-name">@item.Name</div>
+                        <div class="file-meta">
+                            <span class="file-type">@GetFileType(item.Name)</span>
+                            @if (!systemFiles.Contains(item.Name))
+                            {
+                                <button class="delete-btn" @onclick="() => DeleteFile(item.Name)" @onclick:stopPropagation="true">🗑️</button>
+                            }
+                        </div>
+                    </div>
+                }
+
+                @if (!GetCurrentFolders().Any() && !GetCurrentFiles().Any())
+                {
+                    <div class="empty-state">
+                        <p>No files or folders found</p>
+                        <p style="font-size: 12px; margin-top: 10px; color: #999;">Create a folder or upload files to get started</p>
+                    </div>
+                }
+            </div>
+        }
     </div>
 </div>
+
+@if (showCreateFolderDialog)
+{
+    <div class="modal-overlay" @onclick="CloseCreateFolderDialog">
+        <div class="modal-content" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>Create New Folder</h3>
+                <button class="modal-close" @onclick="CloseCreateFolderDialog">×</button>
+            </div>
+            <div class="modal-body">
+                <input type="text"
+                       @bind="newFolderName"
+                       @bind:event="oninput"
+                       placeholder="Enter folder name..."
+                       class="folder-name-input"
+                       @onkeypress="HandleFolderKeyPress" />
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" @onclick="CloseCreateFolderDialog">Cancel</button>
+                <button class="btn-primary" @onclick="CreateFolder" disabled="@(string.IsNullOrWhiteSpace(newFolderName))">Create</button>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .storage-container {
+        padding: 20px;
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+
+    .storage-header {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 20px;
+        align-items: center;
+    }
+
+    .search-wrapper {
+        flex: 1;
+        position: relative;
+    }
+
+    .search-icon {
+        position: absolute;
+        left: 12px;
+        top: 50%;
+        transform: translateY(-50%);
+        font-size: 16px;
+    }
+
+    .storage-search {
+        width: 100%;
+        padding: 10px 10px 10px 40px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 14px;
+        transition: border-color 0.3s;
+    }
+
+        .storage-search:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+
+    .filter-btn, .add-files-btn, .create-folder-btn {
+        padding: 10px 20px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        background: white;
+        cursor: pointer;
+        font-size: 14px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: all 0.3s;
+        white-space: nowrap;
+    }
+
+        .filter-btn:hover, .add-files-btn:hover, .create-folder-btn:hover {
+            background: #f5f5f5;
+            border-color: #4CAF50;
+        }
+
+    .file-upload-wrapper {
+        position: relative;
+    }
+
+    .file-input {
+        display: none;
+    }
+
+    .filter-dropdown {
+        position: absolute;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 100;
+        margin-top: 5px;
+        min-width: 150px;
+    }
+
+    .filter-option {
+        padding: 12px 20px;
+        cursor: pointer;
+        transition: background 0.2s;
+    }
+
+        .filter-option:hover {
+            background: #f5f5f5;
+        }
+
+        .filter-option:first-child {
+            border-radius: 8px 8px 0 0;
+        }
+
+        .filter-option:last-child {
+            border-radius: 0 0 8px 8px;
+        }
+
+    .path-navigation {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 15px;
+        padding: 10px;
+        background: #f8f9fa;
+        border-radius: 6px;
+    }
+
+    .path-btn {
+        padding: 5px 10px;
+        border: none;
+        background: white;
+        border-radius: 4px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+        .path-btn:hover {
+            background: #e9ecef;
+        }
+
+    .path-separator {
+        color: #666;
+    }
+
+    .current-path {
+        font-weight: 500;
+        color: #4CAF50;
+    }
+
+    .error-message {
+        padding: 12px;
+        margin-bottom: 15px;
+        background: #fee;
+        border: 1px solid #fcc;
+        border-radius: 6px;
+        color: #c33;
+        font-size: 14px;
+    }
+
+    .success-message {
+        padding: 12px;
+        margin-bottom: 15px;
+        background: #efe;
+        border: 1px solid #cfc;
+        border-radius: 6px;
+        color: #3c3;
+        font-size: 14px;
+    }
+
+    .storage-content {
+        background: white;
+        border-radius: 8px;
+        padding: 20px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    }
+
+    .files-grid-full {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 15px;
+    }
+
+    .file-item {
+        padding: 15px;
+        border: 1px solid #e0e0e0;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        position: relative;
+    }
+
+        .file-item:hover {
+            border-color: #4CAF50;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+
+    .folder-item {
+        background: #f8f9fa;
+        padding: 0;
+    }
+
+        .folder-item:hover {
+            background: #e9ecef;
+        }
+
+    .folder-content {
+        padding: 15px;
+        cursor: pointer;
+    }
+
+    .delete-btn-folder {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 16px;
+        padding: 4px 8px;
+        transition: all 0.2s;
+        opacity: 0;
+    }
+
+    .folder-item:hover .delete-btn-folder {
+        opacity: 1;
+    }
+
+    .delete-btn-folder:hover {
+        background: #fee;
+        border-color: #fcc;
+        transform: scale(1.1);
+    }
+
+    .file-icon {
+        font-size: 32px;
+        margin-bottom: 10px;
+        text-align: center;
+    }
+
+    .file-name {
+        font-weight: 500;
+        margin-bottom: 8px;
+        word-break: break-word;
+        font-size: 14px;
+    }
+
+    .file-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 12px;
+        color: #666;
+    }
+
+    .delete-btn {
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 16px;
+        padding: 4px;
+        transition: all 0.2s;
+    }
+
+        .delete-btn:hover {
+            opacity: 0.7;
+            transform: scale(1.2);
+        }
+
+    .loading, .empty-state {
+        text-align: center;
+        padding: 40px;
+        color: #666;
+    }
+
+    .loading {
+        font-size: 18px;
+    }
+
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+    }
+
+    .modal-content {
+        background: white;
+        border-radius: 12px;
+        width: 90%;
+        max-width: 500px;
+        box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    }
+
+    .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 20px;
+        border-bottom: 1px solid #e0e0e0;
+    }
+
+        .modal-header h3 {
+            margin: 0;
+            font-size: 20px;
+        }
+
+    .modal-close {
+        background: none;
+        border: none;
+        font-size: 28px;
+        cursor: pointer;
+        color: #666;
+        line-height: 1;
+        padding: 0;
+        width: 30px;
+        height: 30px;
+    }
+
+        .modal-close:hover {
+            color: #333;
+        }
+
+    .modal-body {
+        padding: 20px;
+    }
+
+    .folder-name-input {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        font-size: 16px;
+    }
+
+        .folder-name-input:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+
+    .modal-footer {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        padding: 20px;
+        border-top: 1px solid #e0e0e0;
+    }
+
+    .btn-secondary, .btn-primary {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.3s;
+    }
+
+    .btn-secondary {
+        background: #f5f5f5;
+        color: #333;
+    }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+    .btn-primary {
+        background: #4CAF50;
+        color: white;
+    }
+
+        .btn-primary:hover:not(:disabled) {
+            background: #45a049;
+        }
+
+        .btn-primary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+</style>
 
 @code {
     private string searchQuery = "";
     private string filterType = "";
     private bool showFilterDropdown = false;
     private StorageItem? selectedItem = null;
+    private bool isLoading = false;
+    private string currentPath = "";
+    private string errorMessage = "";
+    private string successMessage = "";
+    private bool showCreateFolderDialog = false;
+    private string newFolderName = "";
 
-    private List<StorageItem> allItems = new();
+    private List<string> folders = new();
+    private List<string> files = new();
 
-    protected override void OnInitialized()
+    private readonly List<string> systemFiles = new()
     {
-        LoadStorageItems();
-    }
+        "dyskretna_shcherbyna.pdf",
+        "matanaliz.pdf"
+    };
 
-    private void LoadStorageItems()
+    protected override async Task OnInitializedAsync()
     {
-        allItems = new List<StorageItem>
+        Logger.LogInformation("Ініціалізація сторінки Storage");
+
+        if (!AuthState.IsAuthenticated || !AuthState.UserId.HasValue)
         {
-            new StorageItem { Name = "Lecture_Notes_Week1.pdf", Type = "PDF", Date = DateTime.Now.AddDays(-7), Size = 2457600 },
-            new StorageItem { Name = "Assignment_Math.docx", Type = "Document", Date = DateTime.Now.AddDays(-5), Size = 524288 },
-            new StorageItem { Name = "Lab_Report_Chemistry.pdf", Type = "PDF", Date = DateTime.Now.AddDays(-3), Size = 1835008 },
-            new StorageItem { Name = "Programming_Project.docx", Type = "Document", Date = DateTime.Now.AddDays(-2), Size = 716800 },
-            new StorageItem { Name = "Study_Guide_Physics.pdf", Type = "PDF", Date = DateTime.Now.AddDays(-1), Size = 3145728 },
-            new StorageItem { Name = "Essay_Literature.docx", Type = "Document", Date = DateTime.Now.AddHours(-12), Size = 409600 },
-            new StorageItem { Name = "Presentation_Slides.pdf", Type = "PDF", Date = DateTime.Now.AddHours(-6), Size = 5242880 },
-            new StorageItem { Name = "Research_Paper.docx", Type = "Document", Date = DateTime.Now.AddHours(-3), Size = 1048576 },
-            new StorageItem { Name = "Exam_Practice.pdf", Type = "PDF", Date = DateTime.Now.AddHours(-1), Size = 2097152 },
-            new StorageItem { Name = "Notes_Biology.docx", Type = "Document", Date = DateTime.Now.AddMinutes(-30), Size = 655360 }
-        };
+            Logger.LogWarning("Спроба доступу до Storage без автентифікації. Перенаправлення на /login");
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        Logger.LogInformation("Користувач автентифікований: UserId={UserId}", AuthState.UserId.Value);
+        await LoadStorageItems();
     }
 
-    private IEnumerable<StorageItem> GetCurrentItems()
+    private async Task LoadStorageItems()
     {
-        var items = allItems.AsEnumerable();
+        if (!AuthState.UserId.HasValue)
+        {
+            errorMessage = "User not authenticated";
+            Logger.LogWarning("Спроба завантажити Storage без UserId");
+            return;
+        }
+
+        Logger.LogInformation("Завантаження елементів Storage: UserId={UserId}, Path={Path}",
+            AuthState.UserId.Value, currentPath ?? "Root");
+
+        isLoading = true;
+        errorMessage = "";
+        successMessage = "";
+        StateHasChanged();
+
+        try
+        {
+            folders = (await Mediator.Send(new GetFoldersQuery(AuthState.UserId.Value, currentPath))).ToList();
+            var userFiles = (await Mediator.Send(new GetFilesByPath(AuthState.UserId.Value, currentPath))).ToList();
+
+            if (string.IsNullOrEmpty(currentPath))
+            {
+                files = systemFiles.Concat(userFiles).Distinct().ToList();
+            }
+            else
+            {
+                files = userFiles;
+            }
+
+            Logger.LogInformation("Storage завантажено: {FolderCount} папок, {FileCount} файлів. UserId={UserId}, Path={Path}",
+                folders.Count, files.Count, AuthState.UserId.Value, currentPath ?? "Root");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Помилка завантаження Storage: UserId={UserId}, Path={Path}",
+                AuthState.UserId.Value, currentPath ?? "Root");
+            errorMessage = "Failed to load files. Please try again.";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task NavigateToPath(string folderName)
+    {
+        var previousPath = currentPath;
+
+        if (string.IsNullOrEmpty(folderName))
+        {
+            currentPath = "";
+        }
+        else
+        {
+            currentPath = string.IsNullOrEmpty(currentPath)
+                ? folderName
+                : Path.Combine(currentPath, folderName);
+        }
+
+        Logger.LogInformation("Навігація до папки: {PreviousPath} -> {NewPath}, UserId={UserId}",
+            previousPath ?? "Root", currentPath ?? "Root", AuthState.UserId);
+
+        await LoadStorageItems();
+    }
+
+    private void ShowCreateFolderDialog()
+    {
+        Logger.LogInformation("Відкриття діалогу створення папки: Path={Path}", currentPath ?? "Root");
+        showCreateFolderDialog = true;
+        newFolderName = "";
+    }
+
+    private void CloseCreateFolderDialog()
+    {
+        showCreateFolderDialog = false;
+        newFolderName = "";
+    }
+
+    private async Task HandleFolderKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !string.IsNullOrWhiteSpace(newFolderName))
+        {
+            await CreateFolder();
+        }
+    }
+
+    private async Task CreateFolder()
+    {
+        if (string.IsNullOrWhiteSpace(newFolderName))
+            return;
+
+        if (!AuthState.UserId.HasValue)
+        {
+            errorMessage = "User not authenticated";
+            Logger.LogWarning("Спроба створити папку без автентифікації");
+            return;
+        }
+
+        Logger.LogInformation("Створення папки: Name={FolderName}, Path={Path}, UserId={UserId}",
+            newFolderName, currentPath ?? "Root", AuthState.UserId.Value);
+
+        try
+        {
+            var folderPath = string.IsNullOrEmpty(currentPath)
+                ? newFolderName
+                : Path.Combine(currentPath, newFolderName);
+
+            await Mediator.Send(new FolderCreateCommand(AuthState.UserId.Value, folderPath));
+
+            Logger.LogInformation("Папка успішно створена: {FolderPath}, UserId={UserId}",
+                folderPath, AuthState.UserId.Value);
+
+            successMessage = $"Folder '{newFolderName}' created successfully!";
+            CloseCreateFolderDialog();
+            await LoadStorageItems();
+
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(3000);
+                successMessage = "";
+                await InvokeAsync(StateHasChanged);
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Помилка створення папки: Name={FolderName}, Path={Path}, UserId={UserId}",
+                newFolderName, currentPath ?? "Root", AuthState.UserId.Value);
+            errorMessage = $"Failed to create folder '{newFolderName}'";
+            CloseCreateFolderDialog();
+        }
+    }
+
+    private async Task DeleteFolder(string folderName)
+    {
+        if (!AuthState.UserId.HasValue)
+        {
+            errorMessage = "User not authenticated";
+            Logger.LogWarning("Спроба видалити папку без автентифікації");
+            return;
+        }
+
+        Logger.LogInformation("Запит на видалення папки: {FolderName}, Path={Path}, UserId={UserId}",
+            folderName, currentPath ?? "Root", AuthState.UserId.Value);
+
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete the folder '{folderName}' and all its contents?");
+        if (!confirmed)
+        {
+            Logger.LogInformation("Видалення папки скасовано користувачем: {FolderName}", folderName);
+            return;
+        }
+
+        try
+        {
+            var folderPath = string.IsNullOrEmpty(currentPath)
+                ? folderName
+                : Path.Combine(currentPath, folderName);
+
+            await Mediator.Send(new FolderDeleteCommand(AuthState.UserId.Value, folderPath));
+
+            Logger.LogInformation("Папка успішно видалена: {FolderPath}, UserId={UserId}",
+                folderPath, AuthState.UserId.Value);
+
+            successMessage = $"Folder '{folderName}' deleted successfully!";
+            await LoadStorageItems();
+
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(3000);
+                successMessage = "";
+                await InvokeAsync(StateHasChanged);
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Помилка видалення папки: {FolderName}, Path={Path}, UserId={UserId}",
+                folderName, currentPath ?? "Root", AuthState.UserId.Value);
+            errorMessage = $"Failed to delete folder '{folderName}'";
+        }
+    }
+
+    private IEnumerable<string> GetCurrentFolders()
+    {
+        var filtered = folders.AsEnumerable();
+
+        if (!string.IsNullOrEmpty(searchQuery))
+        {
+            filtered = filtered.Where(f => f.Contains(searchQuery, StringComparison.OrdinalIgnoreCase));
+        }
+
+        return filtered;
+    }
+
+    private IEnumerable<StorageItem> GetCurrentFiles()
+    {
+        var items = files.Select(f => new StorageItem { Name = f }).AsEnumerable();
 
         if (!string.IsNullOrEmpty(searchQuery))
         {
@@ -91,15 +755,147 @@
 
         if (!string.IsNullOrEmpty(filterType))
         {
-            items = items.Where(i => i.Type == filterType);
+            items = items.Where(i => GetFileType(i.Name) == filterType);
         }
 
         return items;
     }
 
+    private async Task HandleFileUpload(InputFileChangeEventArgs e)
+    {
+        if (!AuthState.UserId.HasValue)
+        {
+            errorMessage = "User not authenticated";
+            Logger.LogWarning("Спроба завантажити файли без автентифікації");
+            return;
+        }
+
+        var fileCount = e.FileCount;
+        Logger.LogInformation("Початок завантаження файлів: Count={FileCount}, Path={Path}, UserId={UserId}",
+            fileCount, currentPath ?? "Root", AuthState.UserId.Value);
+
+        isLoading = true;
+        errorMessage = "";
+        successMessage = "";
+        StateHasChanged();
+
+        try
+        {
+            var uploadedCount = 0;
+            foreach (var file in e.GetMultipleFiles(10))
+            {
+                try
+                {
+                    Logger.LogInformation("Завантаження файлу: {FileName}, Size={FileSize} bytes",
+                        file.Name, file.Size);
+
+                    using var ms = new MemoryStream();
+                    await file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024).CopyToAsync(ms);
+                    var fileData = ms.ToArray();
+
+                    await Mediator.Send(new FileCreateCommand(AuthState.UserId.Value, currentPath, fileData, file.Name));
+                    uploadedCount++;
+
+                    Logger.LogInformation("Файл успішно завантажено: {FileName}, UserId={UserId}",
+                        file.Name, AuthState.UserId.Value);
+                }
+                catch (Exception ex)
+                {
+                    Logger.LogError(ex, "Помилка завантаження файлу: {FileName}, UserId={UserId}",
+                        file.Name, AuthState.UserId.Value);
+                    errorMessage = $"Failed to upload {file.Name}";
+                }
+            }
+
+            if (uploadedCount > 0)
+            {
+                Logger.LogInformation("Завантаження завершено: {UploadedCount}/{TotalCount} файлів успішно, UserId={UserId}",
+                    uploadedCount, fileCount, AuthState.UserId.Value);
+
+                successMessage = $"{uploadedCount} file(s) uploaded successfully!";
+                await LoadStorageItems();
+
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(3000);
+                    successMessage = "";
+                    await InvokeAsync(StateHasChanged);
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Критична помилка завантаження файлів: UserId={UserId}", AuthState.UserId.Value);
+            errorMessage = "File upload failed. Please try again.";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task DeleteFile(string fileName)
+    {
+        if (!AuthState.UserId.HasValue)
+        {
+            errorMessage = "User not authenticated";
+            Logger.LogWarning("Спроба видалити файл без автентифікації");
+            return;
+        }
+
+        if (systemFiles.Contains(fileName))
+        {
+            Logger.LogWarning("Спроба видалити системний файл: {FileName}", fileName);
+            errorMessage = "System files cannot be deleted";
+            await Task.Delay(3000);
+            errorMessage = "";
+            return;
+        }
+
+        Logger.LogInformation("Запит на видалення файлу: {FileName}, Path={Path}, UserId={UserId}",
+            fileName, currentPath ?? "Root", AuthState.UserId.Value);
+
+        var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete '{fileName}'?");
+        if (!confirmed)
+        {
+            Logger.LogInformation("Видалення файлу скасовано користувачем: {FileName}", fileName);
+            return;
+        }
+
+        try
+        {
+            var filePath = string.IsNullOrEmpty(currentPath)
+                ? fileName
+                : Path.Combine(currentPath, fileName);
+
+            await Mediator.Send(new FileDeleteCommand(AuthState.UserId.Value, filePath));
+
+            Logger.LogInformation("Файл успішно видалено: {FilePath}, UserId={UserId}",
+                filePath, AuthState.UserId.Value);
+
+            successMessage = $"File '{fileName}' deleted successfully!";
+            await LoadStorageItems();
+
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(3000);
+                successMessage = "";
+                await InvokeAsync(StateHasChanged);
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Помилка видалення файлу: {FileName}, Path={Path}, UserId={UserId}",
+                fileName, currentPath ?? "Root", AuthState.UserId.Value);
+            errorMessage = $"Failed to delete {fileName}";
+        }
+    }
+
     private void SelectItem(StorageItem item)
     {
         selectedItem = item;
+        Logger.LogDebug("Вибрано файл: {FileName}", item.Name);
     }
 
     private void ToggleFilterDropdown()
@@ -114,35 +910,48 @@
 
     private void SetFilter(string type)
     {
+        Logger.LogInformation("Застосовано фільтр: {FilterType}", string.IsNullOrEmpty(type) ? "All Types" : type);
         filterType = type;
         showFilterDropdown = false;
     }
 
-    private string GetFileIcon(string type)
+    private string GetFileIcon(string fileName)
     {
-        return type switch
+        var extension = Path.GetExtension(fileName).ToLower();
+        return extension switch
         {
-            "Document" => "📄",
-            "PDF" => "📕",
+            ".pdf" => "📕",
+            ".doc" or ".docx" => "📄",
+            ".xls" or ".xlsx" => "📊",
+            ".ppt" or ".pptx" => "📊",
+            ".txt" => "📝",
+            ".jpg" or ".jpeg" or ".png" or ".gif" => "🖼️",
+            ".zip" or ".rar" => "📦",
+            ".mp3" or ".wav" => "🎵",
+            ".mp4" or ".avi" => "🎬",
             _ => "📄"
         };
     }
 
-    private string FormatFileSize(long bytes)
+    private string GetFileType(string fileName)
     {
-        if (bytes < 1024)
-            return $"{bytes} B";
-        else if (bytes < 1024 * 1024)
-            return $"{bytes / 1024} KB";
-        else
-            return $"{bytes / (1024 * 1024)} MB";
+        var extension = Path.GetExtension(fileName).ToLower();
+        return extension switch
+        {
+            ".pdf" => "PDF",
+            ".doc" or ".docx" => "Document",
+            ".xls" or ".xlsx" => "Spreadsheet",
+            ".txt" => "Text",
+            ".jpg" or ".jpeg" or ".png" or ".gif" => "Image",
+            ".zip" or ".rar" => "Archive",
+            ".mp3" or ".wav" => "Audio",
+            ".mp4" or ".avi" => "Video",
+            _ => "File"
+        };
     }
 
     public class StorageItem
     {
         public string Name { get; set; } = "";
-        public string Type { get; set; } = "";
-        public DateTime Date { get; set; }
-        public long? Size { get; set; }
     }
 }

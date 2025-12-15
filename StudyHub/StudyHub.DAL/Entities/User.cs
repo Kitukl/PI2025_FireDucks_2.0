@@ -25,5 +25,6 @@ public class User
     public List<Task> Tasks { get; set; }
 
     public List<SupportTicket> Tickets { get; set; }
+    public List<Comments> Comments { get; set; }
 
 }

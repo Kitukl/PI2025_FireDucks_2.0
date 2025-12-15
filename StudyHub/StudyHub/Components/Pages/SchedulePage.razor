@@ -11,6 +11,7 @@
 @inject IBaseRepository<LessonSlots> SlotsRepo
 @inject IBaseRepository<Schedule> ScheduleRepo
 @inject IJSRuntime JS
+@inject ILogger<Schedule> Logger
 @using System.Threading.Tasks
 @using System.Linq
 @using System.IO
@@ -132,21 +133,34 @@
 
         if (!string.IsNullOrEmpty(newGroup) && newGroup != currentGroupName)
         {
-            currentGroupName = newGroup;
+            Logger.LogInformation("Зміна групи: {OldGroup} -> {NewGroup}", currentGroupName, newGroup);
 
+            currentGroupName = newGroup;
             Preferences.Set("GroupName", currentGroupName);
 
             isLoading = true;
 
-            await LoadScheduleFromDb();
-
-            isLoading = false;
+            try
+            {
+                await LoadScheduleFromDb();
+                Logger.LogInformation("Розклад успішно завантажено для групи: {Group}", currentGroupName);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Помилка зміни групи: {Group}", newGroup);
+            }
+            finally
+            {
+                isLoading = false;
+            }
         }
     }
 
 
     protected override async System.Threading.Tasks.Task OnInitializedAsync()
     {
+        Logger.LogInformation("Ініціалізація сторінки розкладу");
+
         try
         {
             isLoading = true;
@@ -154,6 +168,7 @@
 
             var slotsFromDb = await SlotsRepo.GetAll();
             TimeSlots = slotsFromDb.OrderBy(s => s.Start).ToList();
+            Logger.LogInformation("Завантажено {SlotsCount} часових слотів", TimeSlots.Count);
 
             var allSchedules = await ScheduleRepo.GetAll();
 
@@ -164,15 +179,21 @@
                 .OrderBy(n => n)
                 .ToList();
 
+            Logger.LogInformation("Знайдено {GroupCount} доступних груп", AvailableGroups.Count);
+
             currentGroupName = Preferences.Get("GroupName", AvailableGroups.FirstOrDefault() ?? "ПМІ-31с");
+            Logger.LogInformation("Поточна група: {Group}", currentGroupName);
 
             if (!string.IsNullOrEmpty(currentGroupName))
             {
                 await LoadScheduleFromDb();
             }
+
+            Logger.LogInformation("Ініціалізація сторінки розкладу завершена успішно");
         }
         catch (Exception ex)
         {
+            Logger.LogError(ex, "Помилка ініціалізації сторінки розкладу");
             await JS.InvokeVoidAsync("alert", $"Помилка ініціалізації: {ex.Message}");
         }
         finally
@@ -183,21 +204,36 @@
 
     private async System.Threading.Tasks.Task LoadScheduleFromDb()
     {
-        System.Collections.Generic.List<StudyHub.DAL.Entities.Schedule> allSchedules = await ScheduleRepo.GetAll();
-        StudyHub.DAL.Entities.Schedule? mySchedule = allSchedules.FirstOrDefault(s => s.GroupName == currentGroupName);
+        Logger.LogInformation("Завантаження розкладу з БД для групи: {Group}", currentGroupName);
 
-        if (mySchedule != null && mySchedule.Lessons != null && mySchedule.Lessons.Any())
+        try
         {
-            UpdateRenderedSchedule(mySchedule.Lessons);
+            System.Collections.Generic.List<StudyHub.DAL.Entities.Schedule> allSchedules = await ScheduleRepo.GetAll();
+            StudyHub.DAL.Entities.Schedule? mySchedule = allSchedules.FirstOrDefault(s => s.GroupName == currentGroupName);
+
+            if (mySchedule != null && mySchedule.Lessons != null && mySchedule.Lessons.Any())
+            {
+                UpdateRenderedSchedule(mySchedule.Lessons);
+                Logger.LogInformation("Розклад завантажено: {LessonCount} занять для групи {Group}",
+                    mySchedule.Lessons.Count, currentGroupName);
+            }
+            else
+            {
+                RenderedSchedule.Clear();
+                Logger.LogWarning("Розклад не знайдено для групи: {Group}", currentGroupName);
+            }
         }
-        else
+        catch (Exception ex)
         {
-            RenderedSchedule.Clear();
+            Logger.LogError(ex, "Помилка завантаження розкладу з БД: {Group}", currentGroupName);
+            throw;
         }
     }
 
     private void UpdateRenderedSchedule(List<Lesson> lessons)
     {
+        Logger.LogDebug("Оновлення відображуваного розкладу: {LessonCount} занять", lessons.Count);
+
         RenderedSchedule = lessons
             .GroupBy(l => l.Day)
             .ToDictionary(
@@ -208,6 +244,8 @@
                         : "Невідомий час")
                       .ToDictionary(sg => sg.Key, sg => sg.ToList())
             );
+
+        Logger.LogDebug("Розклад згруповано по {DayCount} днях", RenderedSchedule.Count);
     }
 
     private string GetTypeClass(string type)
@@ -225,8 +263,11 @@
 
     private async System.Threading.Tasks.Task DownloadAndParseFromWebAsync()
     {
+        Logger.LogInformation("Початок оновлення розкладу з сайту для групи: {Group}", currentGroupName);
+
         if (string.IsNullOrEmpty(currentGroupName))
         {
+            Logger.LogWarning("Спроба оновлення розкладу без встановленої групи");
             await JS.InvokeVoidAsync("alert", "Не встановлена група в налаштуваннях!");
             return;
         }
@@ -238,13 +279,16 @@
             var facultyInfo = UniversityServ.GetFacultyByGroup(currentGroupName);
 
             string pdfPath = await DownloaderService.DownloadSchedulePdfAsync(facultyInfo, currentGroupName);
+            Logger.LogInformation("PDF завантажено: {PdfPath}", pdfPath);
 
             await RunParserAsync(pdfPath);
 
+            Logger.LogInformation("Розклад успішно оновлено з сайту для групи: {Group}", currentGroupName);
             await JS.InvokeVoidAsync("alert", "Розклад успішно оновлено!");
         }
         catch (Exception ex)
         {
+            Logger.LogError(ex, "Помилка оновлення розкладу з сайту: {Group}", currentGroupName);
             await JS.InvokeVoidAsync("alert", $"Помилка оновлення: {ex.Message}");
         }
         finally
@@ -259,20 +303,29 @@
         var file = e.File;
         if (file == null) return;
 
+        Logger.LogInformation("Завантаження файлу розкладу: {FileName}, Розмір: {FileSize} bytes",
+            file.Name, file.Size);
+
         var folder = Path.Combine(AppContext.BaseDirectory, "Resources", "Schedules");
         if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
 
         var filePath = Path.Combine(folder, file.Name);
-        using var fs = new FileStream(filePath, FileMode.Create);
-        await file.OpenReadStream().CopyToAsync(fs);
 
         isLoading = true;
         try
         {
+            using var fs = new FileStream(filePath, FileMode.Create);
+            await file.OpenReadStream().CopyToAsync(fs);
+
+            Logger.LogInformation("Файл збережено: {FilePath}", filePath);
+
             await RunParserAsync(filePath);
+
+            Logger.LogInformation("Розклад успішно оновлено з файлу: {FileName}", file.Name);
         }
         catch (Exception ex)
         {
+            Logger.LogError(ex, "Помилка обробки файлу: {FileName}", file.Name);
             await JS.InvokeVoidAsync("alert", $"Помилка файлу: {ex.Message}");
         }
         finally
@@ -284,11 +337,24 @@
 
     private async System.Threading.Tasks.Task RunParserAsync(string filePath)
     {
-        var schedule = await ScheduleService.ParseScheduleAsync(filePath, currentGroupName);
+        Logger.LogInformation("Запуск парсера розкладу: {FilePath}, Група: {Group}", filePath, currentGroupName);
 
-        UpdateRenderedSchedule(schedule.Lessons);
+        try
+        {
+            var schedule = await ScheduleService.ParseScheduleAsync(filePath, currentGroupName);
 
-        var freshSlots = await SlotsRepo.GetAll();
-        TimeSlots = freshSlots.OrderBy(s => s.Start).ToList();
+            UpdateRenderedSchedule(schedule.Lessons);
+
+            var freshSlots = await SlotsRepo.GetAll();
+            TimeSlots = freshSlots.OrderBy(s => s.Start).ToList();
+
+            Logger.LogInformation("Парсинг завершено успішно: {LessonCount} занять, {SlotCount} слотів",
+                schedule.Lessons.Count, TimeSlots.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Помилка парсингу розкладу: {FilePath}, Група: {Group}", filePath, currentGroupName);
+            throw;
+        }
     }
 }

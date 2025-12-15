@@ -1,17 +1,20 @@
 ﻿@page "/profile"
 @inject NavigationManager Navigation
+@inject AuthStateService AuthState
+@inject IUserService UserService
+@inject ILogger<Profile> Logger
+@implements IDisposable
 
 <div class="profile-container">
     <button class="logout-btn" @onclick="LogOut">Log Out</button>
     <div class="profile-left">
+
         <div class="profile-photo-section">
             <div class="profile-photo-frame">
                 <div class="profile-avatar">
                     <svg viewBox="0 0 200 240" class="avatar-svg">
-                        <!-- Head circle -->
-                        <circle cx="100" cy="80" r="50" fill="#999999"/>
-                        <!-- Body shape -->
-                        <ellipse cx="100" cy="200" rx="75" ry="60" fill="#999999"/>
+                        <circle cx="100" cy="80" r="50" fill="#999999" />
+                        <ellipse cx="100" cy="200" rx="75" ry="60" fill="#999999" />
                     </svg>
                 </div>
             </div>
@@ -19,41 +22,56 @@
         </div>
 
         <div class="profile-name-section">
-            <h2 class="profile-name">Name Surname</h2>
+            <h2 class="profile-name">
+                @if (AuthState.IsAuthenticated)
+                {
+                    <span>@AuthState.UserName @AuthState.UserSurname</span>
+                }
+                else
+                {
+                    <span>Завантаження...</span>
+                }
+            </h2>
+
             <div class="profile-group">
                 <label>Group:</label>
-                <select class="group-select">
+                <select class="group-select" @bind="selectedGroup">
                     <option value="PMI-31">PMI-31</option>
                     <option value="PMI-32">PMI-32</option>
                     <option value="PMI-33">PMI-33</option>
                     <option value="PMI-34">PMI-34</option>
+                    <option value="PMI-35">PMI-35</option>
+                    <option value="PMI-36">PMI-36</option>
+                    <option value="PMK-31">PMK-31</option>
+                    <option value="PMK-32">PMK-32</option>
+                    <option value="PMO-31">PMO-31</option>
                 </select>
+                <p class="profile-email">Email: @AuthState.UserEmail</p>
             </div>
         </div>
 
         <div class="settings-section">
             <h3 class="settings-title">Settings</h3>
-            
+
             <div class="setting-item">
                 <div class="setting-icon-wrapper">
                     <svg class="setting-icon" viewBox="0 0 24 24" fill="white">
-                        <!-- Telegram paper plane icon -->
-                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" fill="white"/>
+                        <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" fill="white" />
                     </svg>
                 </div>
                 <span class="setting-label">Connection is required</span>
                 <div class="qr-info-wrapper" @onmouseenter="ShowQRPopup" @onmouseleave="HideQRPopup">
                     <button class="qr-icon-button">
                         <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-                            <rect x="3" y="3" width="8" height="8" fill="none" stroke="currentColor" stroke-width="1.5"/>
-                            <rect x="13" y="3" width="8" height="8" fill="none" stroke="currentColor" stroke-width="1.5"/>
-                            <rect x="3" y="13" width="8" height="8" fill="none" stroke="currentColor" stroke-width="1.5"/>
-                            <rect x="5" y="5" width="4" height="4" fill="currentColor"/>
-                            <rect x="15" y="5" width="4" height="4" fill="currentColor"/>
-                            <rect x="5" y="15" width="4" height="4" fill="currentColor"/>
-                            <rect x="13" y="13" width="3" height="3" fill="currentColor"/>
-                            <rect x="17" y="13" width="4" height="4" fill="currentColor"/>
-                            <rect x="13" y="17" width="3" height="3" fill="currentColor"/>
+                            <rect x="3" y="3" width="8" height="8" fill="none" stroke="currentColor" stroke-width="1.5" />
+                            <rect x="13" y="3" width="8" height="8" fill="none" stroke="currentColor" stroke-width="1.5" />
+                            <rect x="3" y="13" width="8" height="8" fill="none" stroke="currentColor" stroke-width="1.5" />
+                            <rect x="5" y="5" width="4" height="4" fill="currentColor" />
+                            <rect x="15" y="5" width="4" height="4" fill="currentColor" />
+                            <rect x="5" y="15" width="4" height="4" fill="currentColor" />
+                            <rect x="13" y="13" width="3" height="3" fill="currentColor" />
+                            <rect x="17" y="13" width="4" height="4" fill="currentColor" />
+                            <rect x="13" y="17" width="3" height="3" fill="currentColor" />
                         </svg>
                     </button>
                     @if (showQRPopup)
@@ -69,7 +87,7 @@
             <div class="settings-toggles">
                 <div class="toggle-item @(!isTelegramConnected ? "toggle-disabled" : "")">
                     <span class="toggle-icon-left">🔕</span>
-                    <button class="toggle-switch-btn @(isNotificationsOn ? "toggle-on" : "toggle-off")" 
+                    <button class="toggle-switch-btn @(isNotificationsOn ? "toggle-on" : "toggle-off")"
                             @onclick="ToggleNotifications"
                             disabled="@(!isTelegramConnected)">
                         <span class="toggle-slider"></span>
@@ -86,6 +104,13 @@
                 <h2>Contact form</h2>
                 <button class="help-btn">?</button>
             </div>
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <div class="error-message">
+                    ⚠️ @errorMessage
+                </div>
+            }
 
             <div class="form-group">
                 <label>Type:</label>
@@ -113,9 +138,9 @@
 
             <div class="form-group">
                 <label>Subject <span class="required">*</span></label>
-                <input type="text" 
-                       @bind="contactSubject" 
-                       class="form-input @(string.IsNullOrWhiteSpace(contactSubject) && showValidation ? "input-error" : "")" 
+                <input type="text"
+                       @bind="contactSubject"
+                       class="form-input @(string.IsNullOrWhiteSpace(contactSubject) && showValidation ? "input-error" : "")"
                        placeholder="Please summarize your request..." />
                 @if (string.IsNullOrWhiteSpace(contactSubject) && showValidation)
                 {
@@ -136,9 +161,18 @@
             </div>
 
             <div class="form-actions">
-                <button class="send-btn" @onclick="SendContactForm">Send</button>
+                <button class="send-btn" @onclick="SendContactForm" disabled="@isLoading">
+                    @if (isLoading)
+                    {
+                        <span>Sending...</span>
+                    }
+                    else
+                    {
+                        <span>Send</span>
+                    }
+                </button>
             </div>
-            
+
             @if (showSuccessMessage)
             {
                 <div class="success-message">
@@ -149,25 +183,98 @@
     </div>
 </div>
 
+<style>
+    .error-message {
+        padding: 12px;
+        margin-bottom: 15px;
+        background: #fee;
+        border: 1px solid #fcc;
+        border-radius: 6px;
+        color: #c33;
+        font-size: 14px;
+    }
+
+    .success-message {
+        padding: 12px;
+        margin-top: 15px;
+        background: #efe;
+        border: 1px solid #cfc;
+        border-radius: 6px;
+        color: #3c3;
+        font-size: 14px;
+    }
+
+    .validation-message {
+        display: block;
+        color: #c33;
+        font-size: 12px;
+        margin-top: 5px;
+    }
+
+    .input-error {
+        border-color: #c33 !important;
+    }
+</style>
+
 @code {
     private string contactType = "Request";
     private string contactCategory = "";
     private string contactSubject = "";
     private string contactDescription = "";
-    
+    private string selectedGroup = "";
+
     private bool isTelegramConnected = false;
     private bool isNotificationsOn = false;
     private bool showQRPopup = false;
     private bool showValidation = false;
     private bool showSuccessMessage = false;
+    private bool isLoading = false;
+    private string errorMessage = "";
+
+    protected override void OnInitialized()
+    {
+        Logger.LogInformation("Ініціалізація сторінки профілю");
+
+        if (!AuthState.IsAuthenticated)
+        {
+            Logger.LogWarning("Спроба доступу до профілю без автентифікації. Перенаправлення на /login");
+            Navigation.NavigateTo("/login");
+            return;
+        }
+
+        Logger.LogInformation("Користувач на сторінці профілю: UserId={UserId}, Name={Name} {Surname}, Email={Email}, Group={Group}",
+            AuthState.UserId, AuthState.UserName, AuthState.UserSurname, AuthState.UserEmail, AuthState.UserGroupName);
+
+        selectedGroup = AuthState.UserGroupName ?? "PMI-31";
+
+        AuthState.OnAuthStateChanged += StateHasChanged;
+    }
+
+    public void Dispose()
+    {
+        Logger.LogDebug("Dispose сторінки профілю");
+
+        if (AuthState != null)
+        {
+            AuthState.OnAuthStateChanged -= StateHasChanged;
+        }
+    }
+
+    private void OnGroupChanged()
+    {
+        Logger.LogInformation("Зміна групи користувача: UserId={UserId}, OldGroup={OldGroup}, NewGroup={NewGroup}",
+            AuthState.UserId, AuthState.UserGroupName, selectedGroup);
+    }
 
     private void ShowQRPopup()
     {
+        Logger.LogDebug("Відображення QR коду для Telegram");
         showQRPopup = true;
     }
 
     private void HideQRPopup()
     {
+        Logger.LogDebug("Приховування QR коду");
         showQRPopup = false;
     }
 
@@ -176,43 +283,99 @@
         if (isTelegramConnected)
         {
             isNotificationsOn = !isNotificationsOn;
-            // TODO: Відправити запит на бекенд для збереження стану нотифікацій
+            Logger.LogInformation("Зміна налаштувань сповіщень: UserId={UserId}, Enabled={Enabled}",
+                AuthState.UserId, isNotificationsOn);
+        }
+        else
+        {
+            Logger.LogWarning("Спроба увімкнути сповіщення без підключення Telegram: UserId={UserId}",
+                AuthState.UserId);
         }
     }
 
     private async Task SendContactForm()
     {
+        Logger.LogInformation("Початок відправки контактної форми: UserId={UserId}, Type={Type}, Category={Category}",
+            AuthState.UserId, contactType, contactCategory);
+
         showValidation = true;
         showSuccessMessage = false;
+        errorMessage = "";
 
-        if (string.IsNullOrEmpty(contactCategory) || 
-            string.IsNullOrWhiteSpace(contactSubject) || 
+        if (string.IsNullOrEmpty(contactCategory) ||
+            string.IsNullOrWhiteSpace(contactSubject) ||
             string.IsNullOrWhiteSpace(contactDescription))
         {
+            Logger.LogWarning("Валідація контактної форми не пройдена: Category={CategoryEmpty}, Subject={SubjectEmpty}, Description={DescriptionEmpty}, UserId={UserId}",
+                string.IsNullOrEmpty(contactCategory), string.IsNullOrWhiteSpace(contactSubject),
+                string.IsNullOrWhiteSpace(contactDescription), AuthState.UserId);
             return;
         }
 
-        // TODO: Відправити форму на бекенд
-        // await SendToBackend();
+        if (!AuthState.UserId.HasValue)
+        {
+            Logger.LogWarning("Спроба відправити форму без UserId");
+            errorMessage = "User not authenticated";
+            return;
+        }
 
-        // Показати повідомлення про успіх
-        showSuccessMessage = true;
-        
-        // Очистити форму
-        contactType = "Request";
-        contactCategory = "";
-        contactSubject = "";
-        contactDescription = "";
-        showValidation = false;
+        try
+        {
+            isLoading = true;
 
-        // Приховати повідомлення через 3 секунди
-        await Task.Delay(3000);
-        showSuccessMessage = false;
+            Logger.LogInformation("Відправка контактної форми: UserId={UserId}, Type={Type}, Category={Category}, Subject={Subject}",
+                AuthState.UserId.Value, contactType, contactCategory, contactSubject);
+
+            await UserService.SendContactFormAsync(
+                contactType,
+                contactCategory,
+                contactSubject,
+                contactDescription,
+                AuthState.UserId.Value
+            );
+
+            Logger.LogInformation("Контактна форма успішно відправлена: UserId={UserId}, Type={Type}, Category={Category}",
+                AuthState.UserId.Value, contactType, contactCategory);
+
+            showSuccessMessage = true;
+
+            var previousType = contactType;
+            var previousCategory = contactCategory;
+            contactType = "Request";
+            contactCategory = "";
+            contactSubject = "";
+            contactDescription = "";
+            showValidation = false;
+
+            Logger.LogInformation("Форма очищена після успішної відправки: UserId={UserId}", AuthState.UserId.Value);
+
+            _ = Task.Run(async () =>
+            {
+                await Task.Delay(3000);
+                showSuccessMessage = false;
+                await InvokeAsync(StateHasChanged);
+            });
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Помилка відправки контактної форми: UserId={UserId}, Type={Type}, Category={Category}",
+                AuthState.UserId.Value, contactType, contactCategory);
+            errorMessage = $"Failed to send request: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
     }
 
     private void LogOut()
     {
-        // TODO: Clear user session/token
+        Logger.LogInformation("Вихід користувача з системи: UserId={UserId}, Name={Name}",
+            AuthState.UserId, AuthState.UserName);
+
+        AuthState.Logout();
+
+        Logger.LogInformation("Користувач успішно вийшов. Перенаправлення на /login");
         Navigation.NavigateTo("/login");
     }
 }
