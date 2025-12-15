@@ -1,0 +1,13 @@
+﻿/Users/kituk/PI2025_FireDucks_2.0/StudyHub/UnitTests/CommentsTests/CreateCommentsCommandHandlerTests.cs
+/Users/kituk/PI2025_FireDucks_2.0/StudyHub/UnitTests/CommentsTests/DeleteCommentsCommandHandlerTests.cs
+/Users/kituk/PI2025_FireDucks_2.0/StudyHub/UnitTests/CommentsTests/UpdateCommentsCommandHandlerTests.cs
+/Users/kituk/PI2025_FireDucks_2.0/StudyHub/UnitTests/StorageTests/LocalFileStorageServiceTests.cs
+/Users/kituk/PI2025_FireDucks_2.0/StudyHub/UnitTests/TaskTests/CreateTaskCommandHandlerTest.cs
+/Users/kituk/PI2025_FireDucks_2.0/StudyHub/UnitTests/TaskTests/DeleteTaskCommandHandlerTests.cs
+/Users/kituk/PI2025_FireDucks_2.0/StudyHub/UnitTests/TaskTests/UpdateCommandHandlerTests.cs
+/Users/kituk/PI2025_FireDucks_2.0/StudyHub/UnitTests/UserTests/LoginCommandHandlerTest.cs
+/Users/kituk/PI2025_FireDucks_2.0/StudyHub/UnitTests/UserTests/RegisterCommandHandlerTest.cs
+/Users/kituk/.nuget/packages/microsoft.net.test.sdk/17.12.0/build/netcoreapp3.1/Microsoft.NET.Test.Sdk.Program.cs
+/Users/kituk/.nuget/packages/xunit.runner.visualstudio/2.8.2/build/net6.0/xunit.runner.visualstudio.testadapter.dll
+/Users/kituk/.nuget/packages/xunit.runner.visualstudio/2.8.2/build/net6.0/xunit.runner.reporters.netcoreapp10.dll
+/Users/kituk/.nuget/packages/xunit.runner.visualstudio/2.8.2/build/net6.0/xunit.runner.utility.netcoreapp10.dll

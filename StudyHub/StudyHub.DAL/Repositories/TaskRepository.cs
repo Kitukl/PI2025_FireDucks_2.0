@@ -24,6 +24,10 @@ namespace StudyHub.DAL.Repositories
                 Console.WriteLine($"  Status: {item.Status}");
                 Console.WriteLine($"  CreationDate: {item.CreationDate}");
 
+    public virtual async Task<List<DAL.Entities.Task>> GetAll()
+    {
+        return await _context.Tasks.Include(t => t.User).ToListAsync();
+    }
                 await _context.Tasks.AddAsync(item);
                 Console.WriteLine("Calling SaveChangesAsync...");
                 await _context.SaveChangesAsync();
@@ -63,6 +67,11 @@ namespace StudyHub.DAL.Repositories
                 Console.WriteLine($"Status: {item.Status}");
                 Console.WriteLine($"Deadline: {item.Deadline}");
 
+    public virtual async Task<DAL.Entities.Task> GetById(int id)
+    {
+        var task = await _context.Tasks
+            .Include(u => u.User)
+            .FirstOrDefaultAsync(u => u.Id == id);
                 var existingTask = await _context.Tasks.FindAsync(item.Id);
 
                 if (existingTask == null)
@@ -70,6 +79,12 @@ namespace StudyHub.DAL.Repositories
                     throw new Exception($"Task with Id {item.Id} not found");
                 }
 
+    public async Task<List<DAL.Entities.Task>> GetByUser(int userId)
+    {
+        return await _context.Tasks
+            .Where(t => t.User.Id == userId)
+            .Include(t => t.User)
+            .ToListAsync();
                 existingTask.Title = item.Title;
                 existingTask.Description = item.Description;
                 existingTask.Deadline = item.Deadline;
