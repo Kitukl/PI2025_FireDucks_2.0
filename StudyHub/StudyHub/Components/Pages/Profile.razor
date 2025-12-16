@@ -3,7 +3,6 @@
 @inject AuthStateService AuthState
 @inject IUserService UserService
 @inject ILogger<Profile> Logger
-@inject StudyHub.DAL.StudyContext context
 @implements IDisposable
 
 <div class="profile-container">
@@ -13,10 +12,7 @@
         <div class="profile-photo-section">
             <div class="profile-photo-frame">
                 <div class="profile-avatar">
-                    <svg viewBox="0 0 200 240" class="avatar-svg">
-                        <circle cx="100" cy="80" r="50" fill="#999999" />
-                        <ellipse cx="100" cy="200" rx="75" ry="60" fill="#999999" />
-                    </svg>
+                    <img src="images/logoimg.png" alt="StudyHub" class="profile-avatar-pic" />
                 </div>
             </div>
         </div>
@@ -35,9 +31,10 @@
 
             <div class="profile-group">
                 <label>Group:</label>
-                <p>@context.Users.FirstOrDefault(u => u.Email == AuthState.UserEmail).GroupName</p>
-                <label>Email:</label>
-                <p class="profile-email">@AuthState.UserEmail</p>
+                <select class="group-select" @bind="selectedGroup">
+                    <option value="@AuthState.UserGroupName">@AuthState.UserGroupName</option>
+                </select>
+                <p class="profile-email">Email: @AuthState.UserEmail</p>
             </div>
         </div>
     </div>
@@ -159,8 +156,8 @@
         border-color: #c33 !important;
     }
 
-    .profile-group{
-        width: 500px
+    .profile-avatar-pic{
+        width: 200px;
     }
 </style>
 
